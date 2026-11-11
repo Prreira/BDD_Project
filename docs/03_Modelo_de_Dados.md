@@ -2,7 +2,7 @@
 
 SGBD: **Microsoft SQL Server** (2016 SP1 ou superior). Scripts em [`../db`](../db). Diagramas: `uml/06_diagrama_classes.puml` (conceptual) e `uml/07_modelo_relacional_er.puml` (relacional/físico).
 
-O modelo parte do ficheiro original [`referencia/Dados2.sql`](referencia/Dados2.sql) (12 tabelas com chaves naturais, NIF como identificador do eleitor) e foi **adaptado** para uma aplicação de **voto online**.
+O modelo parte de um modelo prévio da equipa, o ficheiro `Dados2.sql` (12 tabelas com chaves naturais, NIF como identificador do eleitor) e foi **adaptado** para uma aplicação de **voto online**.
 
 ## 3.1 Alterações ao modelo original (`Dados2.sql`)
 

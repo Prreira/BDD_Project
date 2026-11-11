@@ -12,8 +12,7 @@ BDD_Project/
 ├─ docs/                               Requisitos, UML, modelo de dados, apresentação
 │  ├─ 00_Como_Executar.md              (este ficheiro)
 │  ├─ 01_Requisitos.md … 05_Apresentacao_e_Limitacoes.md
-│  ├─ uml/*.puml                       Diagramas PlantUML
-│  └─ referencia/                      Dados2.sql (modelo original) e README de planeamento original
+│  └─ uml/*.puml                       Diagramas PlantUML
 ├─ db/
 │  ├─ 01_schema.sql                    Recria a BD eVoto e as tabelas
 │  ├─ 02_gatilhos.sql                  Gatilhos (G1–G10)

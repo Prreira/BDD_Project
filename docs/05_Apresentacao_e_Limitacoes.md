@@ -12,7 +12,7 @@
 
 ## 5.2 Roteiro de demonstração (8–10 minutos)
 
-1. **Modelo (1 min):** `docs/referencia/Dados2.sql` → adaptação (tabela de alterações em `03_Modelo_de_Dados.md` §3.1); realçar `RegistoVoto` vs `Voto`.
+1. **Modelo (1 min):** modelo prévio (`Dados2.sql`) → adaptação (tabela de alterações em `03_Modelo_de_Dados.md` §3.1); realçar `RegistoVoto` vs `Voto`.
 2. **Login do eleitor (2 min):** NIF → código gerado pela BD e mostrado no ecrã → entrar. Mostrar (terminal) que `CodigoAcesso` só guarda *hash*: `SELECT nif, estado, tentativas FROM dbo.CodigoAcesso`.
 3. **Votar (2 min):** Junta de Freguesia 2026 (lista) → confirmar → comprovativo → tentar votar de novo (recusado) → resultados da Legislativas 2024 (Hondt).
 4. **Administração (2 min):** painel em tempo real → eleições → criar uma eleição e percorrer cargos/listas/candidatos/recenseamento → iniciar.

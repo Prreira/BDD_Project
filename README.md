@@ -4,7 +4,7 @@
 
 O **eVoto** é uma aplicação web para a realização e gestão de eleições simuladas. O eleitor entra com o **NIF** e um **código de uso único**; a administração entra com email e palavra-passe. Os dados estão em **Microsoft SQL Server**.
 
-> 📌 **Nota:** a versão inicial deste README (planeamento com ASP.NET Core MVC e Entity Framework) está guardada em [`docs/referencia/README_planeamento_original.md`](docs/referencia/README_planeamento_original.md). A implementação final usa **Node.js + Express** sobre SQL Server, e o modelo de dados parte de [`docs/referencia/Dados2.sql`](docs/referencia/Dados2.sql). Este documento descreve o que foi **efetivamente implementado**.
+> 📌 **Nota:** a versão inicial deste README previa ASP.NET Core MVC com Entity Framework. A implementação final usa **Node.js + Express** sobre SQL Server, e o modelo de dados parte de um modelo prévio da equipa (`Dados2.sql`), adaptado para voto online (sem mesas de voto). Este documento descreve o que foi **efetivamente implementado**.
 
 ---
 
@@ -264,8 +264,7 @@ BDD_Project/
 │  └─ public/ (index.html, eleitor.html, admin.html, css/, js/, img/)
 ├─ db/                               Scripts SQL (01 → 04 → 07; 05 consultas; 06 testes)
 └─ docs/                             Requisitos, UML, modelo de dados, apresentação
-   ├─ uml/*.puml
-   └─ referencia/ (Dados2.sql, README_planeamento_original.md)
+   └─ uml/*.puml
 ```
 
 ---
