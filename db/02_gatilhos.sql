@@ -6,16 +6,15 @@
 
    G1  trg_RegistoVoto_Validar      eleição Em Curso, dentro do prazo, eleitor ativo
    G2  trg_RegistoVoto_Imutavel     registos de voto não podem ser alterados/apagados
-   G3  trg_RegistoVoto_Mesa         mantém MesaDeVoto.num_votantes
-   G4  trg_RegistoVoto_Auditoria    regista que alguém votou (sem o sentido do voto)
-   G5  trg_Voto_Validar             voto só em eleição Em Curso e coerente com o escrutínio
-   G6  trg_Voto_Imutavel            votos não podem ser alterados/apagados
-   G7  trg_<Tabela>_Bloqueio        cargos, listas, candidatos, mesas, membros e
-                                    recenseamento só mudam com a eleição Agendada
-   G8  trg_Candidato_Coerencia      lista/posição conforme o tipo de escrutínio
-   G9  trg_Eleicao_Estado           transições de estado válidas e dados congelados
-   G10 trg_Eleicao_Auditoria        auditoria de criação/alteração/eliminação
-   G11 trg_Eleitor_Idade            eleitor com pelo menos 18 anos
+   G3  trg_RegistoVoto_Auditoria    regista que alguém votou (sem o sentido do voto)
+   G4  trg_Voto_Validar             voto só em eleição Em Curso e coerente com o escrutínio
+   G5  trg_Voto_Imutavel            votos não podem ser alterados/apagados
+   G6  trg_<Tabela>_Bloqueio        cargos, listas, candidatos e recenseamento só
+                                    mudam com a eleição Agendada
+   G7  trg_Candidato_Coerencia      lista/posição conforme o tipo de escrutínio
+   G8  trg_Eleicao_Estado           transições de estado válidas e dados congelados
+   G9  trg_Eleicao_Auditoria        auditoria de criação/alteração/eliminação
+   G10 trg_Eleitor_Idade            eleitor com pelo menos 18 anos
    ===================================================================== */
 USE eVoto;
 GO
@@ -51,21 +50,6 @@ END;
 GO
 
 /* G3 -------------------------------------------------------------------*/
-CREATE OR ALTER TRIGGER dbo.trg_RegistoVoto_Mesa
-ON dbo.RegistoVoto AFTER INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    UPDATE m SET num_votantes = m.num_votantes + x.n
-    FROM dbo.MesaDeVoto m
-    JOIN (SELECT r.eleicao, r.num_mesa, COUNT(*) AS n
-          FROM inserted i JOIN dbo.Recenseamento r ON r.eleicao = i.eleicao AND r.nif = i.nif
-          GROUP BY r.eleicao, r.num_mesa) x
-      ON x.eleicao = m.eleicao AND x.num_mesa = m.num_mesa;
-END;
-GO
-
-/* G4 -------------------------------------------------------------------*/
 CREATE OR ALTER TRIGGER dbo.trg_RegistoVoto_Auditoria
 ON dbo.RegistoVoto AFTER INSERT
 AS
@@ -73,12 +57,12 @@ BEGIN
     SET NOCOUNT ON;
     INSERT dbo.Auditoria (autor, acao, entidade, detalhe)
     SELECT CONCAT(N'NIF:', i.nif), N'VOTAR', N'Eleicao',
-           CONCAT(i.eleicao, N' (origem ', i.origem, N'; o sentido do voto não é guardado)')
+           CONCAT(i.eleicao, N' (o sentido do voto não é guardado)')
     FROM inserted i;
 END;
 GO
 
-/* G5 -------------------------------------------------------------------
+/* G4 -------------------------------------------------------------------
    Um voto válido numa eleição por Lista tem de indicar uma lista; numa
    eleição Uninominal tem de indicar um candidato. */
 CREATE OR ALTER TRIGGER dbo.trg_Voto_Validar
@@ -102,7 +86,7 @@ BEGIN
 END;
 GO
 
-/* G6 -------------------------------------------------------------------*/
+/* G5 -------------------------------------------------------------------*/
 CREATE OR ALTER TRIGGER dbo.trg_Voto_Imutavel
 ON dbo.Voto INSTEAD OF UPDATE, DELETE
 AS
@@ -112,7 +96,7 @@ BEGIN
 END;
 GO
 
-/* G7 -------------------------------------------------------------------
+/* G6 -------------------------------------------------------------------
    A estrutura da eleição só pode mudar enquanto estiver Agendada. */
 CREATE OR ALTER TRIGGER dbo.trg_Cargo_Bloqueio
 ON dbo.Cargo AFTER INSERT, UPDATE, DELETE
@@ -123,7 +107,7 @@ BEGIN
                JOIN dbo.Eleicao e ON e.nome = x.eleicao WHERE e.estado <> 'Agendada')
     BEGIN
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, mesas, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
+        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
     END;
 END;
 GO
@@ -136,7 +120,7 @@ BEGIN
                JOIN dbo.Eleicao e ON e.nome = x.eleicao WHERE e.estado <> 'Agendada')
     BEGIN
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, mesas, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
+        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
     END;
 END;
 GO
@@ -149,35 +133,7 @@ BEGIN
                JOIN dbo.Eleicao e ON e.nome = x.eleicao WHERE e.estado <> 'Agendada')
     BEGIN
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, mesas, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
-    END;
-END;
-GO
-CREATE OR ALTER TRIGGER dbo.trg_MesaDeVoto_Bloqueio
-ON dbo.MesaDeVoto AFTER INSERT, UPDATE, DELETE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    -- o contador num_votantes é atualizado pelo gatilho G3 durante a votação
-    IF EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) AND NOT UPDATE(localizacao) RETURN;
-    IF EXISTS (SELECT 1 FROM (SELECT eleicao FROM inserted UNION SELECT eleicao FROM deleted) x
-               JOIN dbo.Eleicao e ON e.nome = x.eleicao WHERE e.estado <> 'Agendada')
-    BEGIN
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, mesas, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
-    END;
-END;
-GO
-CREATE OR ALTER TRIGGER dbo.trg_MembroMesa_Bloqueio
-ON dbo.MembroMesa AFTER INSERT, UPDATE, DELETE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF EXISTS (SELECT 1 FROM (SELECT eleicao FROM inserted UNION SELECT eleicao FROM deleted) x
-               JOIN dbo.Eleicao e ON e.nome = x.eleicao WHERE e.estado <> 'Agendada')
-    BEGIN
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, mesas, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
+        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
     END;
 END;
 GO
@@ -190,12 +146,12 @@ BEGIN
                JOIN dbo.Eleicao e ON e.nome = x.eleicao WHERE e.estado <> 'Agendada')
     BEGIN
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, mesas, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
+        THROW 50007, N'A estrutura da eleição (cargos, listas, candidatos, recenseamento) só pode ser alterada enquanto estiver Agendada.', 1;
     END;
 END;
 GO
 
-/* G8 -------------------------------------------------------------------*/
+/* G7 -------------------------------------------------------------------*/
 CREATE OR ALTER TRIGGER dbo.trg_Candidato_Coerencia
 ON dbo.Candidato AFTER INSERT, UPDATE
 AS
@@ -216,7 +172,7 @@ BEGIN
 END;
 GO
 
-/* G9 -------------------------------------------------------------------*/
+/* G8 -------------------------------------------------------------------*/
 CREATE OR ALTER TRIGGER dbo.trg_Eleicao_Estado
 ON dbo.Eleicao AFTER UPDATE
 AS
@@ -235,18 +191,17 @@ BEGIN
         THROW 50010, N'Transição de estado da eleição inválida.', 1;
     END;
 
-    -- para iniciar são precisos: 1 cargo, 1 mesa, 1 recenseado e pelo menos 2 opções de voto
+    -- para iniciar são precisos: 1 cargo, 1 recenseado e pelo menos 2 opções de voto
     IF UPDATE(estado) AND EXISTS (
             SELECT 1 FROM inserted i JOIN deleted d ON d.nome = i.nome
             WHERE d.estado = 'Agendada' AND i.estado = 'Em Curso'
               AND ( NOT EXISTS (SELECT 1 FROM dbo.Cargo c WHERE c.eleicao = i.nome)
-                 OR NOT EXISTS (SELECT 1 FROM dbo.MesaDeVoto m WHERE m.eleicao = i.nome)
                  OR NOT EXISTS (SELECT 1 FROM dbo.Recenseamento r WHERE r.eleicao = i.nome)
                  OR (i.tipo_escrutinio = 'Lista'      AND (SELECT COUNT(*) FROM dbo.Lista l WHERE l.eleicao = i.nome) < 2)
                  OR (i.tipo_escrutinio = 'Uninominal' AND (SELECT COUNT(*) FROM dbo.Candidato k WHERE k.eleicao = i.nome) < 2) ))
     BEGIN
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50011, N'Para iniciar a eleição são precisos cargo, mesa, eleitores recenseados e pelo menos 2 listas/candidatos.', 1;
+        THROW 50011, N'Para iniciar a eleição são precisos cargo, eleitores recenseados e pelo menos 2 listas/candidatos.', 1;
     END;
 
     -- dados estruturais congelados depois de a eleição arrancar
@@ -261,7 +216,7 @@ BEGIN
 END;
 GO
 
-/* G10 ------------------------------------------------------------------*/
+/* G9 -------------------------------------------------------------------*/
 CREATE OR ALTER TRIGGER dbo.trg_Eleicao_Auditoria
 ON dbo.Eleicao AFTER INSERT, UPDATE, DELETE
 AS
@@ -284,7 +239,7 @@ BEGIN
 END;
 GO
 
-/* G11 ------------------------------------------------------------------*/
+/* G10 ------------------------------------------------------------------*/
 CREATE OR ALTER TRIGGER dbo.trg_Eleitor_Idade
 ON dbo.Eleitor AFTER INSERT, UPDATE
 AS

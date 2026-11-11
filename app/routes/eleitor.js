@@ -11,11 +11,9 @@ router.get('/eleicoes', wrap(async (req, res) => {
   await pool.request().execute('dbo.sp_AtualizarEstadosEleicoes');
   const r = await pool.request().input('nif', sql.NVarChar(9), req.session.user.nif).query(`
     SELECT e.nome, e.descricao, e.tipo_escrutinio, e.data_inicio, e.data_fim, e.estado,
-           r.num_mesa, m.localizacao,
            CASE WHEN rv.nif IS NULL THEN 0 ELSE 1 END AS ja_votou, rv.data_hora AS data_voto
     FROM dbo.Recenseamento r
     JOIN dbo.Eleicao e   ON e.nome = r.eleicao
-    JOIN dbo.MesaDeVoto m ON m.eleicao = r.eleicao AND m.num_mesa = r.num_mesa
     LEFT JOIN dbo.RegistoVoto rv ON rv.eleicao = r.eleicao AND rv.nif = r.nif
     WHERE r.nif = @nif
     ORDER BY CASE e.estado WHEN 'Em Curso' THEN 0 WHEN 'Agendada' THEN 1 ELSE 2 END, e.data_inicio DESC`);

@@ -6,12 +6,11 @@ start
 :Definir cargos e mandatos;
 :Criar listas (se escrutínio por Lista);
 :Registar candidatos;
-:Criar mesas de voto e membros;
-:Recensear eleitores (distribuídos pelas mesas);
+:Recensear eleitores;
 :Iniciar votação (ou aguardar data_inicio);
 |Sistema|
-if (≥1 cargo, mesa e recenseado;\n≥2 listas/candidatos?) then (não)
-  :Rejeitar (gatilho G9);
+if (≥1 cargo e recenseado;\n≥2 listas/candidatos?) then (não)
+  :Rejeitar (gatilho G8);
   |Administrador|
   :Corrigir dados;
   detach
@@ -24,7 +23,7 @@ endif
 |Administrador|
 :Pedir apuramento;
 |Sistema|
-if (RegistoVoto = contadores das mesas\ne nº de votos esperado?) then (não)
+if (nº de votos = nº esperado\n(vw_Integridade)?) then (não)
   :Rejeitar apuramento (integridade);
   stop
 else (sim)

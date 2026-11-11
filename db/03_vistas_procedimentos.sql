@@ -53,27 +53,25 @@ FROM (
 ) t;
 GO
 
--- Participação por mesa (só indica QUEM votou, nunca em quem)
-CREATE OR ALTER VIEW dbo.vw_ParticipacaoPorMesa AS
-SELECT  m.eleicao, m.num_mesa, m.localizacao,
-        COUNT(r.nif)  AS inscritos,
-        COUNT(rv.nif) AS votantes,
-        CAST(100.0 * COUNT(rv.nif) / NULLIF(COUNT(r.nif), 0) AS DECIMAL(5,2)) AS taxa_participacao
-FROM dbo.MesaDeVoto m
-LEFT JOIN dbo.Recenseamento r ON r.eleicao = m.eleicao AND r.num_mesa = m.num_mesa
-LEFT JOIN dbo.RegistoVoto  rv ON rv.eleicao = r.eleicao AND rv.nif = r.nif
-GROUP BY m.eleicao, m.num_mesa, m.localizacao;
+-- Afluência às urnas online: votantes por dia e hora (só indica QUANDO se
+-- votou, nunca em quem; a hora está no RegistoVoto, não no Voto)
+CREATE OR ALTER VIEW dbo.vw_AfluenciaHoraria AS
+SELECT  rv.eleicao,
+        CAST(rv.data_hora AS DATE)  AS dia,
+        DATEPART(HOUR, rv.data_hora) AS hora,
+        COUNT(*) AS votantes
+FROM dbo.RegistoVoto rv
+GROUP BY rv.eleicao, CAST(rv.data_hora AS DATE), DATEPART(HOUR, rv.data_hora);
 GO
 
--- Asserção de integridade: registos de voto = contadores das mesas, e
--- nº de votos = nº esperado (1 por boletim; 1 por cargo nas uninominais)
+-- Asserção de integridade: nº de votos = nº esperado
+-- (1 por boletim; 1 por cargo nas uninominais)
 CREATE OR ALTER VIEW dbo.vw_Integridade AS
-SELECT  t.eleicao, t.estado, t.registos_voto, t.votantes_mesas, t.votos,
+SELECT  t.eleicao, t.estado, t.registos_voto, t.votos,
         CASE t.tipo WHEN 'Lista' THEN t.registos_voto ELSE t.registos_voto * t.cargos END AS votos_esperados
 FROM (
     SELECT e.nome AS eleicao, e.estado, e.tipo_escrutinio AS tipo,
            (SELECT COUNT(*) FROM dbo.RegistoVoto rv WHERE rv.eleicao = e.nome) AS registos_voto,
-           (SELECT ISNULL(SUM(m.num_votantes), 0) FROM dbo.MesaDeVoto m WHERE m.eleicao = e.nome) AS votantes_mesas,
            (SELECT COUNT(*) FROM dbo.Voto v WHERE v.eleicao = e.nome) AS votos,
            (SELECT COUNT(*) FROM dbo.Cargo c WHERE c.eleicao = e.nome) AS cargos
     FROM dbo.Eleicao e
@@ -205,11 +203,11 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    DECLARE @mesa INT, @tipo NVARCHAR(20);
+    DECLARE @tipo NVARCHAR(20);
     SELECT @tipo = tipo_escrutinio FROM dbo.Eleicao WHERE nome = @eleicao;
-    SELECT @mesa = num_mesa FROM dbo.Recenseamento WHERE eleicao = @eleicao AND nif = @nif;
 
-    IF @tipo IS NULL OR @mesa IS NULL
+    IF @tipo IS NULL
+       OR NOT EXISTS (SELECT 1 FROM dbo.Recenseamento WHERE eleicao = @eleicao AND nif = @nif)
         THROW 50020, N'Não consta do recenseamento desta eleição.', 1;
     IF EXISTS (SELECT 1 FROM dbo.RegistoVoto WHERE eleicao = @eleicao AND nif = @nif)
         THROW 50021, N'Já exerceu o seu direito de voto nesta eleição.', 1;
@@ -232,10 +230,10 @@ BEGIN
         THROW 50024, N'Tem de indicar uma escolha para cada cargo em disputa.', 1;
 
     BEGIN TRANSACTION;
-        INSERT dbo.RegistoVoto (eleicao, nif, origem) VALUES (@eleicao, @nif, 'Automatica');
+        INSERT dbo.RegistoVoto (eleicao, nif) VALUES (@eleicao, @nif);
 
-        INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, cargo, sigla_lista, nif_candidato)
-        SELECT @eleicao, @mesa, e.tipo,
+        INSERT dbo.Voto (eleicao, tipo_voto, cargo, sigla_lista, nif_candidato)
+        SELECT @eleicao, e.tipo,
                CASE WHEN @tipo = 'Lista' THEN NULL ELSE e.cargo END,
                CASE WHEN @tipo = 'Lista' AND e.tipo = N'Valido' THEN e.sigla END,
                CASE WHEN @tipo = 'Uninominal' AND e.tipo = N'Valido' THEN e.nif END
@@ -296,7 +294,7 @@ BEGIN
     IF @tipo IS NULL
         THROW 50030, N'Só é possível apurar uma eleição que esteja encerrada.', 1;
     IF EXISTS (SELECT 1 FROM dbo.vw_Integridade
-               WHERE eleicao = @eleicao AND (registos_voto <> votantes_mesas OR votos <> votos_esperados))
+               WHERE eleicao = @eleicao AND votos <> votos_esperados)
         THROW 50031, N'Integridade violada: o número de votos não corresponde ao número de votantes.', 1;
 
     BEGIN TRANSACTION;

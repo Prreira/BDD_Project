@@ -16,7 +16,7 @@ BDD_Project/
 │  └─ referencia/                      Dados2.sql (modelo original) e README de planeamento original
 ├─ db/
 │  ├─ 01_schema.sql                    Recria a BD eVoto e as tabelas
-│  ├─ 02_gatilhos.sql                  Gatilhos (G1–G11)
+│  ├─ 02_gatilhos.sql                  Gatilhos (G1–G10)
 │  ├─ 03_vistas_procedimentos.sql      Vistas, NIF, código de acesso, votação, apuramento
 │  ├─ 04_dados_teste.sql               Dados base (60 eleitores, 3 eleições)
 │  ├─ 07_dados_adicionais.sql          Carga de volume (300 eleitores, 6 eleições, ~700 votos)

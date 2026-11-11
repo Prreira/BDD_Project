@@ -6,19 +6,18 @@ USE eVoto;
 GO
 
 /* C1 ---------------------------------------------------------------------
-   Enunciado: Eleições em curso, com o nº de mesas, de eleitores recenseados
-   e os dias que faltam para encerrar.
-   Técnica: JOIN + GROUP BY + funções de data
+   Enunciado: Eleições em curso, com o nº de cargos, de candidatos, de eleitores
+   recenseados, de votos já registados e os dias que faltam para encerrar.
+   Técnica: subconsultas correlacionadas + funções de data
    ------------------------------------------------------------------------ */
 SELECT e.nome, e.tipo_escrutinio, e.data_fim,
-       COUNT(DISTINCT m.num_mesa) AS mesas,
-       COUNT(DISTINCT r.nif)      AS recenseados,
+       (SELECT COUNT(*) FROM dbo.Cargo c        WHERE c.eleicao = e.nome) AS cargos,
+       (SELECT COUNT(*) FROM dbo.Candidato k    WHERE k.eleicao = e.nome) AS candidatos,
+       (SELECT COUNT(*) FROM dbo.Recenseamento r WHERE r.eleicao = e.nome) AS recenseados,
+       (SELECT COUNT(*) FROM dbo.RegistoVoto rv WHERE rv.eleicao = e.nome) AS votos_registados,
        DATEDIFF(DAY, GETDATE(), e.data_fim) AS dias_para_encerrar
 FROM dbo.Eleicao e
-LEFT JOIN dbo.MesaDeVoto m   ON m.eleicao = e.nome
-LEFT JOIN dbo.Recenseamento r ON r.eleicao = e.nome
-WHERE e.estado = 'Em Curso'
-GROUP BY e.nome, e.tipo_escrutinio, e.data_fim;
+WHERE e.estado = 'Em Curso';
 GO
 
 /* C2 ---------------------------------------------------------------------
@@ -45,28 +44,28 @@ ORDER BY taxa_participacao DESC;
 GO
 
 /* C4 ---------------------------------------------------------------------
-   Enunciado: Eleitores recenseados na presidencial que ainda NÃO votaram,
-   com a mesa a que pertencem.
+   Enunciado: Eleitores recenseados na presidencial que ainda NÃO votaram
+   (para campanhas de lembrete).
    Técnica: NOT EXISTS (subconsulta correlacionada)
    ------------------------------------------------------------------------ */
-SELECT el.nif, el.nome, r.num_mesa, m.localizacao
+SELECT el.nif, el.nome, el.ativo
 FROM dbo.Recenseamento r
-JOIN dbo.Eleitor el   ON el.nif = r.nif
-JOIN dbo.MesaDeVoto m ON m.eleicao = r.eleicao AND m.num_mesa = r.num_mesa
+JOIN dbo.Eleitor el ON el.nif = r.nif
 WHERE r.eleicao = N'Eleição Presidencial 2026'
   AND NOT EXISTS (SELECT 1 FROM dbo.RegistoVoto rv WHERE rv.eleicao = r.eleicao AND rv.nif = r.nif)
-ORDER BY r.num_mesa, el.nome;
+ORDER BY el.nome;
 GO
 
 /* C5 ---------------------------------------------------------------------
-   Enunciado: Participação por mesa de voto na presidencial, da mesa com
-   maior para a de menor participação.
-   Técnica: vista com agregação e LEFT JOIN
+   Enunciado: Votos registados por dia na presidencial de 2026, com o dia
+   de maior afluência primeiro.
+   Técnica: vista de afluência + GROUP BY + SUM
    ------------------------------------------------------------------------ */
-SELECT num_mesa, localizacao, inscritos, votantes, taxa_participacao
-FROM dbo.vw_ParticipacaoPorMesa
-WHERE eleicao = N'Eleição Presidencial 2026'
-ORDER BY taxa_participacao DESC;
+SELECT a.dia, SUM(a.votantes) AS votantes, MAX(a.votantes) AS pico_numa_hora
+FROM dbo.vw_AfluenciaHoraria a
+WHERE a.eleicao = N'Eleição Presidencial 2026'
+GROUP BY a.dia
+ORDER BY votantes DESC;
 GO
 
 /* C6 ---------------------------------------------------------------------
@@ -192,27 +191,26 @@ WHERE el.ativo = 0 AND e.estado IN ('Agendada', 'Em Curso');
 GO
 
 /* C14 --------------------------------------------------------------------
-   Enunciado: Asserção de integridade - eleições em que os registos de voto,
-   os contadores das mesas ou o número de votos não batem certo (0 linhas).
+   Enunciado: Asserção de integridade - eleições em que o número de votos
+   não corresponde ao número esperado de votos (0 linhas).
    Técnica: vista de integridade
    ------------------------------------------------------------------------ */
-SELECT eleicao, registos_voto, votantes_mesas, votos, votos_esperados
+SELECT eleicao, registos_voto, votos, votos_esperados
 FROM dbo.vw_Integridade
-WHERE registos_voto <> votantes_mesas OR votos <> votos_esperados;
+WHERE votos <> votos_esperados;
 GO
 
 /* C15 --------------------------------------------------------------------
-   Enunciado: Ranking das mesas com maior abstenção em cada eleição, só para
-   mesas com abstenção superior a 50%.
+   Enunciado: Ranking das eleições já iniciadas por abstenção (da maior para
+   a menor), indicando a abstenção em % e em nº de eleitores.
    Técnica: vista + DENSE_RANK()
    ------------------------------------------------------------------------ */
-SELECT pm.eleicao, pm.num_mesa, pm.localizacao,
-       pm.inscritos - pm.votantes AS abstencionistas,
-       CAST(100.0 - pm.taxa_participacao AS DECIMAL(5,2)) AS taxa_abstencao,
-       DENSE_RANK() OVER (PARTITION BY pm.eleicao ORDER BY 100.0 - pm.taxa_participacao DESC) AS posicao
-FROM dbo.vw_ParticipacaoPorMesa pm
-WHERE 100.0 - pm.taxa_participacao > 50
-ORDER BY pm.eleicao, posicao;
+SELECT DENSE_RANK() OVER (ORDER BY p.abstencao * 1.0 / NULLIF(p.inscritos, 0) DESC) AS posicao,
+       p.eleicao, p.estado, p.abstencao AS abstencionistas,
+       CAST(100.0 - p.taxa_participacao AS DECIMAL(5,2)) AS taxa_abstencao
+FROM dbo.vw_ParticipacaoEleicao p
+WHERE p.estado IN ('Em Curso', 'Encerrada', 'Apurada')
+ORDER BY posicao;
 GO
 
 /* C16 --------------------------------------------------------------------

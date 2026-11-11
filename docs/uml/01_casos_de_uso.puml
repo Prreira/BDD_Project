@@ -21,13 +21,12 @@ rectangle eVoto {
 
   usecase "UC07 Gerir eleições" as UC07
   usecase "UC08 Gerir cargos, listas\ne candidatos" as UC08
-  usecase "UC09 Gerir mesas de voto" as UC09
-  usecase "UC10 Gerir recenseamento" as UC10
-  usecase "UC11 Alterar estado / apurar\n(Hondt)" as UC11
-  usecase "UC12 Gerir eleitores" as UC12
-  usecase "UC13 Consultar painel (dashboards)" as UC13
-  usecase "UC14 Consultar auditoria\ne autenticações" as UC14
-  usecase "Abrir/encerrar eleições\npor calendário" as UC15
+  usecase "UC09 Gerir recenseamento" as UC09
+  usecase "UC10 Alterar estado / apurar\n(Hondt)" as UC10
+  usecase "UC11 Gerir eleitores" as UC11
+  usecase "UC12 Consultar painel (dashboards)" as UC12
+  usecase "UC13 Consultar auditoria\ne autenticações" as UC13
+  usecase "Abrir/encerrar eleições\npor calendário" as UC14
 }
 
 Eleitor --> UC01
@@ -38,13 +37,13 @@ Eleitor --> UC03
 
 Administrador --> UC02
 Administrador --> UC07
+Administrador --> UC10
 Administrador --> UC11
 Administrador --> UC12
 Administrador --> UC13
-Administrador --> UC14
 Administrador --> UC03
 
-Sistema --> UC15
+Sistema --> UC14
 
 UC01 ..> UC01a : <<include>>
 UC01 ..> UC01b : <<include>>
@@ -53,12 +52,11 @@ UC05 ..> UC01 : <<include>>
 UC06 ..> UC01 : <<include>>
 UC05 ..> UC05a : <<include>>
 UC07 ..> UC02 : <<include>>
+UC10 ..> UC02 : <<include>>
 UC11 ..> UC02 : <<include>>
 UC12 ..> UC02 : <<include>>
 UC13 ..> UC02 : <<include>>
-UC14 ..> UC02 : <<include>>
 UC08 ..> UC07 : <<extend>>
 UC09 ..> UC07 : <<extend>>
-UC10 ..> UC07 : <<extend>>
-UC15 ..> UC11 : <<include>>
+UC14 ..> UC10 : <<include>>
 @enduml

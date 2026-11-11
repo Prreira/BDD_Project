@@ -50,8 +50,7 @@ function desenharLista() {
       <div style="display:flex;justify-content:space-between;gap:.6rem">${badge(e.estado)}<span class="muted small">Escrutínio ${esc(e.tipo_escrutinio.toLowerCase())}</span></div>
       <h3 style="margin-top:12px">${esc(e.nome)}</h3>
       <p class="muted small">${esc(e.descricao || '')}</p>
-      <p class="small"><strong>Período:</strong> ${esc(fmtData(e.data_inicio))} &rarr; ${esc(fmtData(e.data_fim))}<br>
-        <strong>Mesa de voto:</strong> n.º ${e.num_mesa} &middot; ${esc(e.localizacao)}</p>
+      <p class="small"><strong>Período:</strong> ${esc(fmtData(e.data_inicio))} &rarr; ${esc(fmtData(e.data_fim))}</p>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">${acao} ${res}</div>
     </article>`;
   }).join('');

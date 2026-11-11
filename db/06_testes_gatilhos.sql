@@ -28,15 +28,15 @@ BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAG
 
 PRINT N'--- G1: registo de voto numa eleição Agendada (deve falhar) ---';
 BEGIN TRY
-    BEGIN TRAN; INSERT dbo.RegistoVoto (eleicao, nif, origem)
-        SELECT TOP 1 eleicao, nif, 'Automatica' FROM dbo.Recenseamento WHERE eleicao = @fre; ROLLBACK;
+    BEGIN TRAN; INSERT dbo.RegistoVoto (eleicao, nif)
+        SELECT TOP 1 eleicao, nif FROM dbo.Recenseamento WHERE eleicao = @fre; ROLLBACK;
     PRINT N'FALHOU: voto aceite numa eleição não iniciada.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
 PRINT N'--- FK RegistoVoto->Recenseamento: NIF não recenseado (deve falhar) ---';
 BEGIN TRY
-    BEGIN TRAN; INSERT dbo.RegistoVoto (eleicao, nif, origem) VALUES (@pres, dbo.fn_NifCompletar('29999999'), 'Automatica'); ROLLBACK;
+    BEGIN TRAN; INSERT dbo.RegistoVoto (eleicao, nif) VALUES (@pres, dbo.fn_NifCompletar('29999999')); ROLLBACK;
     PRINT N'FALHOU: registo aceite.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
@@ -48,14 +48,14 @@ BEGIN TRY
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G6: apagar votos (deve falhar) ---';
+PRINT N'--- G5: apagar votos (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; DELETE FROM dbo.Voto WHERE eleicao = @pres; ROLLBACK;
     PRINT N'FALHOU: votos apagados.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G7: acrescentar um candidato a eleição em curso (deve falhar) ---';
+PRINT N'--- G6: acrescentar um candidato a eleição em curso (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; INSERT dbo.Candidato (eleicao, nif, cargo)
         SELECT @pres, nif, N'Presidente da República' FROM dbo.Eleitor WHERE nif = @livre; ROLLBACK;
@@ -63,28 +63,28 @@ BEGIN TRY
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G7: retirar eleitor do recenseamento de eleição em curso (deve falhar) ---';
+PRINT N'--- G6: retirar eleitor do recenseamento de eleição em curso (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; DELETE FROM dbo.Recenseamento WHERE eleicao = @pres AND nif = @livre; ROLLBACK;
     PRINT N'FALHOU: recenseamento alterado.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G8: candidato sem lista numa eleição por Lista (deve falhar) ---';
+PRINT N'--- G7: candidato sem lista numa eleição por Lista (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; INSERT dbo.Candidato (eleicao, nif, cargo) VALUES (@fre, @livre, N'Junta de Freguesia'); ROLLBACK;
     PRINT N'FALHOU: candidato incoerente aceite.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G9: transição inválida Agendada -> Encerrada (deve falhar) ---';
+PRINT N'--- G8: transição inválida Agendada -> Encerrada (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; UPDATE dbo.Eleicao SET estado = 'Encerrada' WHERE nome = @fre; ROLLBACK;
     PRINT N'FALHOU: transição aceite.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G9: iniciar eleição sem mesas/recenseados/listas (deve falhar) ---';
+PRINT N'--- G8: iniciar eleição sem cargos/recenseados/listas (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN;
     INSERT dbo.Eleicao (nome, data_inicio, data_fim, tipo_escrutinio) VALUES (N'Teste vazia', GETDATE(), DATEADD(DAY, 1, GETDATE()), 'Lista');
@@ -94,14 +94,14 @@ BEGIN TRY
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G9: mudar a data de início de eleição em curso (deve falhar) ---';
+PRINT N'--- G8: mudar a data de início de eleição em curso (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; UPDATE dbo.Eleicao SET data_inicio = DATEADD(DAY, -5, data_inicio) WHERE nome = @pres; ROLLBACK;
     PRINT N'FALHOU: data alterada.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G11: eleitor menor de idade (deve falhar) ---';
+PRINT N'--- G10: eleitor menor de idade (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; INSERT dbo.Eleitor (nif, nome, data_nascimento) VALUES (dbo.fn_NifCompletar('29999998'), N'Menor', DATEADD(YEAR, -16, GETDATE())); ROLLBACK;
     PRINT N'FALHOU: menor aceite.';
@@ -117,14 +117,14 @@ BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAG
 
 PRINT N'--- CHECK Voto: voto válido sem destino (deve falhar) ---';
 BEGIN TRY
-    BEGIN TRAN; INSERT dbo.Voto (eleicao, num_mesa, tipo_voto) VALUES (@pres, 1, 'Valido'); ROLLBACK;
+    BEGIN TRAN; INSERT dbo.Voto (eleicao, tipo_voto) VALUES (@pres, 'Valido'); ROLLBACK;
     PRINT N'FALHOU: voto incoerente aceite.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
-PRINT N'--- G5: inserir um voto numa eleição já apurada (deve falhar) ---';
+PRINT N'--- G4: inserir um voto numa eleição já apurada (deve falhar) ---';
 BEGIN TRY
-    BEGIN TRAN; INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, sigla_lista) VALUES (@aut, 1, 'Valido', N'PH'); ROLLBACK;
+    BEGIN TRAN; INSERT dbo.Voto (eleicao, tipo_voto, sigla_lista) VALUES (@aut, 'Valido', N'PH'); ROLLBACK;
     PRINT N'FALHOU: voto aceite em eleição encerrada.';
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
@@ -135,8 +135,8 @@ BEGIN TRY
     EXEC dbo.sp_RegistarVoto @livre, @pres, @json;
     DECLARE @antes INT = (SELECT COUNT(*) FROM dbo.RegistoVoto WHERE eleicao = @pres) - 1;
     DECLARE @n INT = (SELECT COUNT(*) FROM dbo.RegistoVoto WHERE eleicao = @pres);
-    DECLARE @m INT = (SELECT SUM(num_votantes) FROM dbo.MesaDeVoto WHERE eleicao = @pres);
-    PRINT N'OK  voto registado; registos = ' + CAST(@n AS NVARCHAR(10)) + N', soma dos contadores das mesas = ' + CAST(@m AS NVARCHAR(10)) + N' (antes: ' + CAST(@antes AS NVARCHAR(10)) + N').';
+    DECLARE @v INT = (SELECT COUNT(*) FROM dbo.Voto WHERE eleicao = @pres AND tipo_voto IS NOT NULL);
+    PRINT N'OK  voto registado; registos = ' + CAST(@n AS NVARCHAR(10)) + N', votos = ' + CAST(@v AS NVARCHAR(10)) + N' (antes: ' + CAST(@antes AS NVARCHAR(10)) + N').';
     ROLLBACK;
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'FALHOU: ' + ERROR_MESSAGE(); END CATCH;

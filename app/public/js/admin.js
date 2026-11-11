@@ -64,9 +64,10 @@ async function carregarResultados(nome) {
   const p = r.participacao;
   desenhar('chParticipacao', 'doughnut', ['Votaram', 'Abstenção'],
     [{ data: [p.votantes, p.abstencao], backgroundColor: ['#1769e0', '#d8deea'] }]);
-  desenhar('chMesas', 'bar', r.mesas.map((m) => `Mesa ${m.num_mesa}`),
-    [{ label: 'Participação (%)', data: r.mesas.map((m) => m.taxa_participacao), backgroundColor: '#15945a' }],
-    { scales: { y: { beginAtZero: true, max: 100 } } });
+  const af = r.afluencia.slice(-48);   // últimas 48 horas com votos
+  desenhar('chAfluencia', 'bar', af.map((a) => { const d = new Date(a.dia); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(a.hora).padStart(2, '0')}h`; }),
+    [{ label: 'Votos por hora', data: af.map((a) => a.votantes), backgroundColor: '#15945a' }],
+    { scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { maxRotation: 60, autoSkip: true } } } });
   $('resInfo').textContent = `Recenseados: ${p.inscritos} | Votantes: ${p.votantes} (${p.taxa_participacao ?? 0}%) | Brancos: ${p.votos_brancos} | Nulos: ${p.votos_nulos}.`;
 }
 
@@ -81,11 +82,11 @@ function erroModal(msg) { const m = $('mErro'); if (m) { m.textContent = msg; m.
 async function carregarEleicoes() {
   eleicoesCache = await api('/api/admin/eleicoes');
   $('tEleicoes').innerHTML =
-    '<tr><th>Eleição</th><th>Escrutínio</th><th>Período</th><th>Estado</th><th>Cand.</th><th>Mesas</th><th>Recens.</th><th></th></tr>' +
+    '<tr><th>Eleição</th><th>Escrutínio</th><th>Período</th><th>Estado</th><th>Cand.</th><th>Recens.</th><th>Votos</th><th></th></tr>' +
     eleicoesCache.map((e, i) => `<tr>
       <td><strong>${esc(e.nome)}</strong></td><td class="small">${esc(e.tipo_escrutinio)}</td>
       <td class="small">${esc(fmtData(e.data_inicio))}<br>${esc(fmtData(e.data_fim))}</td>
-      <td>${badge(e.estado)}</td><td>${e.candidatos}</td><td>${e.mesas}</td><td>${e.recenseados}</td>
+      <td>${badge(e.estado)}</td><td>${e.candidatos}</td><td>${e.recenseados}</td><td>${e.votos}</td>
       <td><button class="btn sm" onclick="gerirEleicao(${i})">Gerir</button></td></tr>`).join('');
 }
 
@@ -113,7 +114,7 @@ function novaEleicao() {
 async function criarEleicao() {
   try {
     const r = await api('/api/admin/eleicoes', { method: 'POST', body: lerForm(true) });
-    toast('Eleição criada. Adicione agora cargos, candidatos, mesas e recenseamento.');
+    toast('Eleição criada. Adicione agora cargos, listas, candidatos e recenseamento.');
     await carregarEleicoes();
     gerirEleicao(eleicoesCache.findIndex((e) => e.nome === r.nome));
   } catch (e) { erroModal(e.message); }
@@ -140,19 +141,13 @@ async function abrirGestao(nome) {
     const cands = d.candidatos.map((c) => `<tr><td>${esc(c.nif)}</td><td>${esc(c.nome)}</td><td>${esc(c.cargo)}</td>
       <td>${esc(c.sigla_lista || '-')}${c.posicao ? ` (#${c.posicao})` : ''}</td>
       <td>${ed ? `<button class="btn danger sm" data-del="candidatos/${enc(c.nif)}">Remover</button>` : ''}</td></tr>`).join('');
-    const mesas = d.mesas.map((m) => {
-      const mem = d.membros.filter((x) => x.num_mesa === m.num_mesa);
-      return `<tr><td><strong>${m.num_mesa}</strong></td><td>${esc(m.localizacao)}</td><td>${m.num_votantes}</td>
-        <td class="small">${mem.map((x) => `${esc(x.funcao)}: ${esc(x.nome)}${ed ? ` <a href="#" data-delm="${m.num_mesa}/${enc(x.nif)}" aria-label="Remover membro">&times;</a>` : ''}`).join('<br>') || '-'}</td>
-        <td>${ed ? `<button class="btn danger sm" data-del="mesas/${m.num_mesa}">Remover</button>` : ''}</td></tr>`;
-    }).join('');
 
     abrirModal(`
       <div class="modal-head"><div><h2>${esc(e.nome)}</h2>${badge(e.estado)} <span class="muted small">Escrutínio ${esc(e.tipo_escrutinio)}</span></div>
         <button class="btn sec sm" onclick="fecharModal()">Fechar</button></div>
       <div id="mErro" class="msg err hidden" role="alert"></div>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin:.8rem 0">${tr} ${apagar}</div>
-      ${ed ? '' : '<p class="msg info">A estrutura da eleição (cargos, listas, candidatos, mesas e recenseamento) está bloqueada porque a eleição já não está agendada.</p>'}
+      ${ed ? '' : '<p class="msg info">A estrutura da eleição (cargos, listas, candidatos e recenseamento) está bloqueada porque a eleição já não está agendada.</p>'}
 
       <h3 class="sec-t">Dados gerais</h3>${formEleicao(e, false)}
       <button class="btn sec" style="margin-top:.8rem" id="btnGuardar">Guardar alterações</button>
@@ -175,16 +170,8 @@ async function abrirGestao(nome) {
         <div><label for="cdPos">Posição</label><input id="cdPos" type="number" min="1" value="1"></div>` : ''}
         <button class="btn" id="btnCand">Adicionar candidato</button></div>` : ''}
 
-      <h3 class="sec-t">Mesas de voto</h3>
-      <div class="table-wrap"><table><tr><th>N.º</th><th>Localização</th><th>Votantes</th><th>Membros</th><th></th></tr>${mesas || '<tr><td colspan="5" class="muted">Sem mesas.</td></tr>'}</table></div>
-      ${ed ? `<div class="row" style="margin-top:.6rem"><div><label for="msLoc">Nova mesa - localização</label><input id="msLoc" maxlength="200"></div><button class="btn" id="btnMesa">Adicionar mesa</button></div>
-        ${d.mesas.length ? `<div class="row" style="margin-top:.4rem"><div><label for="mbMesa">Membro da mesa</label><select id="mbMesa">${d.mesas.map((m) => `<option value="${m.num_mesa}">Mesa ${m.num_mesa}</option>`).join('')}</select></div>
-        <div><label for="mbNif">Eleitor</label><select id="mbNif">${optEleitores}</select></div>
-        <div><label for="mbFun">Função</label><select id="mbFun"><option>Presidente</option><option>Secretário</option><option>Vogal</option></select></div>
-        <button class="btn" id="btnMembro">Adicionar membro</button></div>` : ''}` : ''}
-
       <h3 class="sec-t">Recenseamento <span class="muted small">(${d.recenseados} eleitores)</span></h3>
-      ${ed ? `<p class="small muted">Recenseia todos os eleitores ativos que ainda não estejam inscritos, distribuindo-os pelas mesas.</p>
+      ${ed ? `<p class="small muted">Recenseia todos os eleitores ativos que ainda não estejam inscritos nesta eleição.</p>
         <button class="btn" id="btnRec">Recensear eleitores ativos</button> <button class="btn danger" id="btnLimpar">Limpar recenseamento</button>`
         : '<p class="muted small">Recenseamento bloqueado.</p>'}`);
 
@@ -208,17 +195,12 @@ function ligarGestao(nome, d) {
   document.querySelectorAll('#modal [data-del]').forEach((b) => b.onclick = () => {
     if (confirm('Remover este elemento?')) acao(() => api(`${base}/${b.dataset.del}`, { method: 'DELETE' }), 'Removido.');
   });
-  document.querySelectorAll('#modal [data-delm]').forEach((a) => a.onclick = (ev) => {
-    ev.preventDefault(); acao(() => api(`${base}/mesas/${a.dataset.delm.split('/')[0]}/membros/${a.dataset.delm.split('/')[1]}`, { method: 'DELETE' }), 'Membro removido.');
-  });
   on('btnGuardar', () => acao(() => api(base, { method: 'PUT', body: lerForm(false) }), 'Eleição atualizada.'));
   on('btnApagar', () => { if (confirm('Eliminar esta eleição? Não pode ser desfeito.')) acao(async () => { await api(base, { method: 'DELETE' }); atual = null; fecharModal(); }, 'Eleição eliminada.'); });
   on('btnCargo', () => acao(() => api(`${base}/cargos`, { method: 'POST', body: { cargo: $('cgNome').value, numMandatos: $('cgMand').value } }), 'Cargo adicionado.'));
   on('btnLista', () => acao(() => api(`${base}/listas`, { method: 'POST', body: { sigla: $('lsSigla').value, designacao: $('lsDes').value } }), 'Lista adicionada.'));
   on('btnCand', () => acao(() => api(`${base}/candidatos`, { method: 'POST', body: {
     nif: $('cdNif').value, cargo: $('cdCargo').value, sigla: $('cdLista') ? $('cdLista').value : null, posicao: $('cdPos') ? $('cdPos').value : null } }), 'Candidato adicionado.'));
-  on('btnMesa', () => acao(() => api(`${base}/mesas`, { method: 'POST', body: { localizacao: $('msLoc').value } }), 'Mesa adicionada.'));
-  on('btnMembro', () => acao(() => api(`${base}/mesas/${$('mbMesa').value}/membros`, { method: 'POST', body: { nif: $('mbNif').value, funcao: $('mbFun').value } }), 'Membro adicionado.'));
   on('btnRec', () => acao(() => api(`${base}/recenseamento`, { method: 'POST', body: {} }), (r) => `${r.recenseados} eleitores recenseados.`));
   on('btnLimpar', () => { if (confirm('Remover todos os eleitores do recenseamento?')) acao(() => api(`${base}/recenseamento`, { method: 'DELETE' }), 'Recenseamento limpo.'); });
 }

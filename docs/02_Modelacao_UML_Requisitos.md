@@ -26,39 +26,36 @@ Os diagramas estão em PlantUML na pasta [`uml/`](uml). Para os exportar para im
 - A sessão é destruída; também expira após 30 min de inatividade.
 
 ### UC04 — Consultar as minhas eleições
-- **Ator:** Eleitor. **Fluxo:** lista das eleições do recenseamento com estado, período, mesa e indicação "já votou".
+- **Ator:** Eleitor. **Fluxo:** lista das eleições do recenseamento com estado, período e indicação "já votou".
 
 ### UC05 — Votar
 - **Pré:** eleição Em Curso, eleitor recenseado e sem registo de voto.
 - **Fluxo principal:** 1) escolhe a eleição; 2) o sistema apresenta o boletim (listas, ou candidatos por cargo); 3) escolhe uma opção por grupo (ou branco/nulo); 4) revê e confirma (*include* «Confirmar voto»); 5) o sistema grava `RegistoVoto` e `Voto(s)` numa transação; 6) emite o comprovativo.
 - **Alternativos:** A1) já votou → rejeitado (PK/procedimento); A2) a eleição encerrou entretanto → rejeitado (G1); A3) boletim incompleto → botão desativado.
-- **Pós:** existe um `RegistoVoto` e `Voto`(s) sem ligação entre si; `MesaDeVoto.num_votantes` incrementado.
+- **Pós:** existe um `RegistoVoto` e `Voto`(s) sem ligação entre si.
 
 ### UC06 — Consultar resultados
 - **Pré:** eleição Apurada em que estava recenseado. **Fluxo:** votos, percentagens, mandatos (listas), participação, brancos e nulos.
 
 ### UC07 — Gerir eleições
-- Criar (nome, descrição, escrutínio, datas), editar e eliminar (só Agendada). Alterações de tipo/início depois de iniciada → G9.
+- Criar (nome, descrição, escrutínio, datas), editar e eliminar (só Agendada). Alterações de tipo/início depois de iniciada → G8.
 
 ### UC08 — Gerir cargos, listas e candidatos
-- **Pré:** eleição Agendada. Cargo com nº de mandatos; listas (sigla, designação); candidatos escolhidos entre os eleitores, com cargo e (se Lista) lista e posição. Eleição iniciada → G7.
+- **Pré:** eleição Agendada. Cargo com nº de mandatos; listas (sigla, designação); candidatos escolhidos entre os eleitores, com cargo e (se Lista) lista e posição. Eleição iniciada → G6.
 
-### UC09 — Gerir mesas de voto
-- Criar mesas (localização) e atribuir membros (Presidente, Secretário, Vogal).
+### UC09 — Gerir recenseamento
+- Recensear todos os eleitores ativos ainda não inscritos na eleição; limpar recenseamento.
 
-### UC10 — Gerir recenseamento
-- Recensear todos os eleitores ativos ainda não inscritos, distribuídos pelas mesas; limpar recenseamento.
+### UC10 — Alterar estado / apurar
+- **Atores:** Administrador, Sistema. Iniciar, encerrar e apurar; o Sistema abre/encerra por calendário (UC14). **Alternativos:** transição inválida → G8; iniciar sem requisitos → G8; apurar com integridade violada → `sp_ApurarEleicao` rejeita. O apuramento distribui mandatos por Hondt (Lista) ou elege o mais votado por cargo (Uninominal).
 
-### UC11 — Alterar estado / apurar
-- **Atores:** Administrador, Sistema. Iniciar, encerrar e apurar; o Sistema abre/encerra por calendário (UC15). **Alternativos:** transição inválida → G9; iniciar sem requisitos → G9; apurar com integridade violada → `sp_ApurarEleicao` rejeita. O apuramento distribui mandatos por Hondt (Lista) ou elege o mais votado por cargo (Uninominal).
+### UC11 — Gerir eleitores
+- Criar (NIF, nome, data de nascimento), editar, ativar/desativar. **Alternativos:** NIF inválido → CHECK; duplicado → PK; menor de 18 anos → G10.
 
-### UC12 — Gerir eleitores
-- Criar (NIF, nome, data de nascimento), editar, ativar/desativar. **Alternativos:** NIF inválido → CHECK; duplicado → PK; menor de 18 anos → G11.
+### UC12 — Consultar painel
+- Indicadores, resultados por opção, participação, afluência ao longo do tempo (votos por hora) e atividade recente; atualização automática a cada 15 s.
 
-### UC13 — Consultar painel
-- Indicadores, resultados por opção, participação, participação por mesa e atividade recente; atualização automática a cada 15 s.
-
-### UC14 — Consultar auditoria e autenticações
+### UC13 — Consultar auditoria e autenticações
 - Últimas ações (autor, ação, detalhe) e últimas tentativas de autenticação. O sentido do voto nunca é registado.
 
 ## 2.2 Diagramas de atividade, sequência e estados
@@ -66,5 +63,5 @@ Os diagramas estão em PlantUML na pasta [`uml/`](uml). Para os exportar para im
 - **Atividades "Autenticar e votar"** (`02_*.puml`): *swimlanes* Eleitor/Sistema, validações do NIF e do código, `ROLLBACK`.
 - **Atividades "Preparar e apurar"** (`03_*.puml`): ciclo completo da eleição, incluindo Hondt.
 - **Sequência** (`04_*.puml`): `sp_GerarCodigoAcesso` / `sp_ValidarCodigoAcesso` e `sp_RegistarVoto`, com os gatilhos.
-- **Estados da eleição** (`05_*.puml`): transições permitidas, implementadas pelo gatilho G9.
+- **Estados da eleição** (`05_*.puml`): transições permitidas, implementadas pelo gatilho G8.
 - **Classes** (`06_*.puml`): modelo conceptual que dá origem ao modelo relacional (ver `03_Modelo_de_Dados.md`).

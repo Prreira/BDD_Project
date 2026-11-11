@@ -70,12 +70,7 @@ SELECT @e1, e.nif, N'Assembleia Municipal',
        ((e.n - 46) % 3) + 1
 FROM #E e WHERE e.n BETWEEN 46 AND 57;
 
-INSERT dbo.MesaDeVoto (eleicao, num_mesa, localizacao) VALUES
- (@e1, 1, N'Escola Básica n.º 1'), (@e1, 2, N'Junta de Freguesia Central'), (@e1, 3, N'Biblioteca Municipal');
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e1, nif, (n % 3) + 1 FROM #E;
-INSERT dbo.MembroMesa (eleicao, num_mesa, nif, funcao)
-SELECT @e1, ((e.n - 1) / 3) + 1, e.nif, CASE (e.n - 1) % 3 WHEN 0 THEN N'Presidente' WHEN 1 THEN N'Secretário' ELSE N'Vogal' END
-FROM #E e WHERE e.n <= 9;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e1, nif FROM #E;
 
 UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e1;
 
@@ -83,16 +78,16 @@ UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e1;
 DISABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 
-INSERT dbo.RegistoVoto (eleicao, nif, data_hora, origem)
-SELECT @e1, e.nif, DATEADD(MINUTE, e.n * 17, DATEADD(HOUR, 8, CAST(CAST(DATEADD(DAY, -60, GETDATE()) AS DATE) AS DATETIME))), 'Automatica'
+INSERT dbo.RegistoVoto (eleicao, nif, data_hora)
+SELECT @e1, e.nif, DATEADD(MINUTE, e.n * 17, DATEADD(HOUR, 8, CAST(CAST(DATEADD(DAY, -60, GETDATE()) AS DATE) AS DATETIME)))
 FROM #E e WHERE e.n <= 48;
 
 ENABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 ENABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 
 -- 48 votos: PH 19, AC 15, MV 8, IC 3, 2 brancos, 1 nulo
-INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, sigla_lista)
-SELECT @e1, (e.n % 3) + 1,
+INSERT dbo.Voto (eleicao, tipo_voto, sigla_lista)
+SELECT @e1,
        CASE WHEN e.n <= 45 THEN 'Valido' WHEN e.n <= 47 THEN 'Branco' ELSE 'Nulo' END,
        CASE WHEN e.n <= 19 THEN N'PH' WHEN e.n <= 34 THEN N'AC' WHEN e.n <= 42 THEN N'MV' WHEN e.n <= 45 THEN N'IC' END
 FROM #E e WHERE e.n <= 48;
@@ -110,21 +105,16 @@ VALUES (@e2, N'Eleição do Presidente da República. Vote uma única vez.',
 
 INSERT dbo.Cargo (eleicao, cargo, num_mandatos) VALUES (@e2, N'Presidente da República', 1);
 INSERT dbo.Candidato (eleicao, nif, cargo) SELECT @e2, nif, N'Presidente da República' FROM #E WHERE n BETWEEN 58 AND 60;
-INSERT dbo.MesaDeVoto (eleicao, num_mesa, localizacao) VALUES
- (@e2, 1, N'Escola Básica n.º 1'), (@e2, 2, N'Junta de Freguesia Central'), (@e2, 3, N'Biblioteca Municipal');
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e2, nif, (n % 3) + 1 FROM #E;
-INSERT dbo.MembroMesa (eleicao, num_mesa, nif, funcao)
-SELECT @e2, ((e.n - 1) / 3) + 1, e.nif, CASE (e.n - 1) % 3 WHEN 0 THEN N'Presidente' WHEN 1 THEN N'Secretário' ELSE N'Vogal' END
-FROM #E e WHERE e.n <= 9;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e2, nif FROM #E;
 
 UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e2;
 
 -- 22 votantes (eleitores 20 a 41), com todos os gatilhos ativos
-INSERT dbo.RegistoVoto (eleicao, nif, origem) SELECT @e2, nif, 'Automatica' FROM #E WHERE n BETWEEN 20 AND 41;
+INSERT dbo.RegistoVoto (eleicao, nif) SELECT @e2, nif FROM #E WHERE n BETWEEN 20 AND 41;
 
 -- 22 votos: candidato 58 -> 9, 59 -> 7, 60 -> 3, 2 brancos, 1 nulo
-INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, cargo, nif_candidato)
-SELECT @e2, (e.n % 3) + 1,
+INSERT dbo.Voto (eleicao, tipo_voto, cargo, nif_candidato)
+SELECT @e2,
        CASE WHEN e.n - 19 <= 19 THEN 'Valido' WHEN e.n - 19 <= 21 THEN 'Branco' ELSE 'Nulo' END,
        N'Presidente da República',
        CASE WHEN e.n - 19 <= 9 THEN (SELECT nif FROM #E WHERE n = 58)
@@ -145,9 +135,7 @@ INSERT dbo.Lista (eleicao, sigla, designacao) VALUES
 INSERT dbo.Candidato (eleicao, nif, cargo, sigla_lista, posicao)
 SELECT @e3, e.nif, N'Junta de Freguesia', CASE WHEN e.n <= 42 THEN N'PH' ELSE N'AC' END, ((e.n - 40) % 3) + 1
 FROM #E e WHERE e.n BETWEEN 40 AND 45;
-INSERT dbo.MesaDeVoto (eleicao, num_mesa, localizacao) VALUES
- (@e3, 1, N'Sede da Junta de Freguesia'), (@e3, 2, N'Centro Comunitário');
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e3, nif, (n % 2) + 1 FROM #E;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e3, nif FROM #E;
 
 /* ---- alguns registos de autenticação de exemplo ---------------------- */
 INSERT dbo.LogAutenticacao (nif_tentativa, data_hora, sucesso, motivo_falha, etapa)

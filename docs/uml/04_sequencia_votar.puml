@@ -32,8 +32,8 @@ S -> S : valida sessão (perfil ELEITOR); traduz escolhas
 S -> DB : EXEC sp_RegistarVoto(nif da sessão, eleição, JSON)
 DB -> DB : verifica recenseamento e voto prévio
 DB -> DB : BEGIN TRANSACTION
-DB -> DB : INSERT RegistoVoto (G1, G3, G4)
-DB -> DB : INSERT Voto (G5; sem ligação ao NIF)
+DB -> DB : INSERT RegistoVoto (G1, G2, G3)
+DB -> DB : INSERT Voto (G4; sem ligação ao NIF)
 DB -> DB : COMMIT
 DB --> S : data_hora, referência
 S --> B : 200

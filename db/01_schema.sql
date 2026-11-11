@@ -3,9 +3,11 @@
    01_schema.sql : criação da base de dados (SQL Server)
 
    Este esquema é a adaptação do modelo original (Dados2.sql) ao projeto web:
-   - mantém as 12 tabelas originais (Eleicao, Cargo, Lista, Eleitor,
-     MesaDeVoto, Recenseamento, Candidato, MembroMesa, RegistoVoto, Voto,
+   - mantém as tabelas originais que fazem sentido num voto ONLINE (Eleicao,
+     Cargo, Lista, Eleitor, Recenseamento, Candidato, RegistoVoto, Voto,
      ResultadoApuramento, LogAutenticacao) com as mesmas chaves naturais (NIF);
+   - remove MesaDeVoto, MembroMesa e a coluna origem (só existiam para voto
+     presencial);
    - acrescenta o necessário para a aplicação: Administrador (login por
      email/palavra-passe), CodigoAcesso (código de uso único enviado ao eleitor
      quando este se identifica com o NIF) e Auditoria.
@@ -130,29 +132,19 @@ CREATE TABLE dbo.Eleitor (
 );
 GO
 
-/* 5. MESA DE VOTO (num_votantes é mantido pelo gatilho trg_RegistoVoto_Mesa) */
-CREATE TABLE dbo.MesaDeVoto (
-    eleicao      NVARCHAR(200) NOT NULL,
-    num_mesa     INT           NOT NULL,
-    localizacao  NVARCHAR(200) NOT NULL,
-    num_votantes INT           NOT NULL DEFAULT 0,
-    PRIMARY KEY (eleicao, num_mesa),
-    FOREIGN KEY (eleicao) REFERENCES dbo.Eleicao (nome)
-);
-GO
-
-/* 6. RECENSEAMENTO (eleitor inscrito numa eleição, numa mesa) */
+/* 5. RECENSEAMENTO (eleitor inscrito numa eleição). Como o voto é online,
+      não existem mesas de voto: MesaDeVoto e MembroMesa do modelo original
+      foram removidas. */
 CREATE TABLE dbo.Recenseamento (
     eleicao  NVARCHAR(200) NOT NULL,
     nif      NVARCHAR(9)   NOT NULL,
-    num_mesa INT           NOT NULL,
     PRIMARY KEY (eleicao, nif),
-    FOREIGN KEY (nif) REFERENCES dbo.Eleitor (nif),
-    FOREIGN KEY (eleicao, num_mesa) REFERENCES dbo.MesaDeVoto (eleicao, num_mesa)
+    FOREIGN KEY (eleicao) REFERENCES dbo.Eleicao (nome),
+    FOREIGN KEY (nif) REFERENCES dbo.Eleitor (nif)
 );
 GO
 
-/* 7. CANDIDATO (sigla_lista e posicao só em eleições do tipo 'Lista') */
+/* 6. CANDIDATO (sigla_lista e posicao só em eleições do tipo 'Lista') */
 CREATE TABLE dbo.Candidato (
     eleicao     NVARCHAR(200) NOT NULL,
     nif         NVARCHAR(9)   NOT NULL,
@@ -174,31 +166,18 @@ CREATE UNIQUE INDEX UX_Candidato_Posicao ON dbo.Candidato (eleicao, sigla_lista,
     WHERE sigla_lista IS NOT NULL;
 GO
 
-/* 8. MEMBRO DA MESA */
-CREATE TABLE dbo.MembroMesa (
-    eleicao  NVARCHAR(200) NOT NULL,
-    num_mesa INT           NOT NULL,
-    nif      NVARCHAR(9)   NOT NULL,
-    funcao   NVARCHAR(100) NOT NULL,
-    PRIMARY KEY (eleicao, num_mesa, nif),
-    FOREIGN KEY (eleicao, num_mesa) REFERENCES dbo.MesaDeVoto (eleicao, num_mesa),
-    FOREIGN KEY (nif) REFERENCES dbo.Eleitor (nif)
-);
-GO
-
-/* 9. REGISTO DE VOTO: prova QUE o eleitor votou; a PK impede o duplo voto.
-      origem 'Automatica' = voto online; 'Manual' = voto presencial na mesa. */
+/* 7. REGISTO DE VOTO: prova QUE o eleitor votou; a PK impede o duplo voto.
+      (A coluna "origem" do modelo original foi removida: todo o voto é online.) */
 CREATE TABLE dbo.RegistoVoto (
     eleicao   NVARCHAR(200) NOT NULL,
     nif       NVARCHAR(9)   NOT NULL,
     data_hora DATETIME      NOT NULL DEFAULT GETDATE(),
-    origem    NVARCHAR(20)  NOT NULL CHECK (origem IN ('Automatica', 'Manual')),
     PRIMARY KEY (eleicao, nif),
     FOREIGN KEY (eleicao, nif) REFERENCES dbo.Recenseamento (eleicao, nif)
 );
 GO
 
-/* 10. VOTO: sem ligação ao eleitor (destino = lista OU candidato).
+/* 8. VOTO: sem ligação ao eleitor (destino = lista OU candidato).
        ALTERAÇÃO de anonimato: id_voto passa a GUID aleatório (NEWSEQUENTIALID
        não é usado de propósito) em vez de IDENTITY, porque um inteiro
        sequencial permitiria cruzar a ordem dos votos com data_hora do
@@ -206,12 +185,11 @@ GO
 CREATE TABLE dbo.Voto (
     id_voto       UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
     eleicao       NVARCHAR(200) NOT NULL,
-    num_mesa      INT           NOT NULL,
     tipo_voto     NVARCHAR(20)  NOT NULL CHECK (tipo_voto IN ('Valido', 'Branco', 'Nulo')),
     cargo         NVARCHAR(100) NULL,
     sigla_lista   NVARCHAR(15)  NULL,
     nif_candidato NVARCHAR(9)   NULL,
-    FOREIGN KEY (eleicao, num_mesa) REFERENCES dbo.MesaDeVoto (eleicao, num_mesa),
+    FOREIGN KEY (eleicao) REFERENCES dbo.Eleicao (nome),
     FOREIGN KEY (eleicao, cargo) REFERENCES dbo.Cargo (eleicao, cargo),
     FOREIGN KEY (eleicao, sigla_lista) REFERENCES dbo.Lista (eleicao, sigla),
     FOREIGN KEY (eleicao, nif_candidato, cargo) REFERENCES dbo.Candidato (eleicao, nif, cargo),
@@ -225,7 +203,7 @@ CREATE TABLE dbo.Voto (
 );
 GO
 
-/* 11. RESULTADO DO APURAMENTO (linha sem lista nem candidato = total global) */
+/* 9. RESULTADO DO APURAMENTO (linha sem lista nem candidato = total global) */
 CREATE TABLE dbo.ResultadoApuramento (
     id_resultado  INT IDENTITY(1,1) PRIMARY KEY,
     eleicao       NVARCHAR(200) NOT NULL,
@@ -242,9 +220,9 @@ CREATE TABLE dbo.ResultadoApuramento (
 );
 GO
 
-/* 12. LOG DE AUTENTICAÇÃO (original; eleicao/num_mesa passam a ser opcionais
-       porque o login é anterior à escolha da eleição; nif_tentativa guarda
-       também o email das tentativas de administradores) */
+/* 10. LOG DE AUTENTICAÇÃO (original; eleicao passa a ser opcional porque o
+       login é anterior à escolha da eleição; num_mesa foi removido;
+       nif_tentativa guarda também o email das tentativas de administradores) */
 CREATE TABLE dbo.LogAutenticacao (
     id_log        INT IDENTITY(1,1) PRIMARY KEY,
     nif_tentativa NVARCHAR(120) NOT NULL,
@@ -252,10 +230,9 @@ CREATE TABLE dbo.LogAutenticacao (
     sucesso       BIT           NOT NULL,
     motivo_falha  NVARCHAR(255) NULL,
     eleicao       NVARCHAR(200) NULL,
-    num_mesa      INT           NULL,
     etapa         NVARCHAR(20)  NOT NULL DEFAULT 'Codigo'      -- novo: Codigo | Validacao | Admin
         CHECK (etapa IN ('Codigo', 'Validacao', 'Admin')),
-    FOREIGN KEY (eleicao, num_mesa) REFERENCES dbo.MesaDeVoto (eleicao, num_mesa)
+    FOREIGN KEY (eleicao) REFERENCES dbo.Eleicao (nome)
 );
 GO
 
@@ -293,7 +270,8 @@ GO
 
 /* Índices de suporte às consultas e aos dashboards */
 CREATE INDEX IX_Recenseamento_Nif   ON dbo.Recenseamento (nif);
-CREATE INDEX IX_Voto_Eleicao        ON dbo.Voto (eleicao, tipo_voto) INCLUDE (sigla_lista, nif_candidato, cargo, num_mesa);
+CREATE INDEX IX_Voto_Eleicao        ON dbo.Voto (eleicao, tipo_voto) INCLUDE (sigla_lista, nif_candidato, cargo);
+CREATE INDEX IX_RegistoVoto_Hora    ON dbo.RegistoVoto (eleicao, data_hora);
 CREATE INDEX IX_Eleicao_Estado      ON dbo.Eleicao (estado, data_inicio, data_fim);
 CREATE INDEX IX_CodigoAcesso_Nif    ON dbo.CodigoAcesso (nif, estado, expira_em);
 CREATE INDEX IX_LogAutenticacao_Dt  ON dbo.LogAutenticacao (data_hora DESC);

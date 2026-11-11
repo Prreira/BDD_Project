@@ -39,8 +39,8 @@ router.get('/eleicoes', wrap(async (req, res) => {
   const r = await (await getPool()).request().query(`
     SELECT e.nome, e.tipo_escrutinio, e.data_inicio, e.data_fim, e.estado,
            (SELECT COUNT(*) FROM dbo.Candidato c WHERE c.eleicao = e.nome) AS candidatos,
-           (SELECT COUNT(*) FROM dbo.MesaDeVoto m WHERE m.eleicao = e.nome) AS mesas,
-           (SELECT COUNT(*) FROM dbo.Recenseamento r WHERE r.eleicao = e.nome) AS recenseados
+           (SELECT COUNT(*) FROM dbo.Recenseamento r WHERE r.eleicao = e.nome) AS recenseados,
+           (SELECT COUNT(*) FROM dbo.RegistoVoto rv WHERE rv.eleicao = e.nome) AS votos
     FROM dbo.Eleicao e ORDER BY e.data_inicio DESC`);
   res.json(r.recordset);
 }));
@@ -50,18 +50,15 @@ router.get('/eleicoes/:nome', wrap(async (req, res) => {
   const q = (txt) => pool.request().input('e', sql.NVarChar(200), req.params.nome).query(txt);
   const e = await q('SELECT nome, descricao, data_inicio, data_fim, tipo_escrutinio, estado FROM dbo.Eleicao WHERE nome = @e');
   if (!e.recordset.length) return res.status(404).json({ erro: 'Eleição não encontrada.' });
-  const [cargos, listas, cands, mesas, membros, rec] = await Promise.all([
+  const [cargos, listas, cands, rec] = await Promise.all([
     q('SELECT cargo, num_mandatos FROM dbo.Cargo WHERE eleicao = @e ORDER BY cargo'),
     q('SELECT sigla, designacao FROM dbo.Lista WHERE eleicao = @e ORDER BY sigla'),
     q(`SELECT c.nif, el.nome, c.cargo, c.sigla_lista, c.posicao FROM dbo.Candidato c
        JOIN dbo.Eleitor el ON el.nif = c.nif WHERE c.eleicao = @e ORDER BY c.sigla_lista, c.posicao, el.nome`),
-    q('SELECT num_mesa, localizacao, num_votantes FROM dbo.MesaDeVoto WHERE eleicao = @e ORDER BY num_mesa'),
-    q(`SELECT mm.num_mesa, mm.nif, el.nome, mm.funcao FROM dbo.MembroMesa mm
-       JOIN dbo.Eleitor el ON el.nif = mm.nif WHERE mm.eleicao = @e ORDER BY mm.num_mesa, mm.funcao`),
     q('SELECT COUNT(*) AS n FROM dbo.Recenseamento WHERE eleicao = @e'),
   ]);
   res.json({ eleicao: e.recordset[0], cargos: cargos.recordset, listas: listas.recordset,
-    candidatos: cands.recordset, mesas: mesas.recordset, membros: membros.recordset, recenseados: rec.recordset[0].n });
+    candidatos: cands.recordset, recenseados: rec.recordset[0].n });
 }));
 
 function lerEleicao(body, criar) {
@@ -100,7 +97,7 @@ router.delete('/eleicoes/:nome', wrap(async (req, res) => {
     const e = await q('SELECT estado FROM dbo.Eleicao WHERE nome = @e');
     if (!e.recordset.length) lancar(50900, 'Eleição não encontrada.');
     if (e.recordset[0].estado !== 'Agendada') lancar(50901, 'Só é possível eliminar eleições agendadas.');
-    for (const t of ['MembroMesa', 'Recenseamento', 'Candidato', 'Lista', 'MesaDeVoto', 'Cargo'])
+    for (const t of ['Recenseamento', 'Candidato', 'Lista', 'Cargo'])
       await q(`DELETE FROM dbo.${t} WHERE eleicao = @e`);
     await q('DELETE FROM dbo.Eleicao WHERE nome = @e');
   });
@@ -121,7 +118,7 @@ router.post('/eleicoes/:nome/estado', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-/* ------------------- CARGOS, LISTAS, CANDIDATOS, MESAS ------------------- */
+/* ---------------------- CARGOS, LISTAS, CANDIDATOS ----------------------- */
 
 router.post('/eleicoes/:nome/cargos', wrap(async (req, res) => {
   const cargo = texto(req.body.cargo, 100), n = Number(req.body.numMandatos || 1);
@@ -168,52 +165,15 @@ router.delete('/eleicoes/:nome/candidatos/:nif', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-router.post('/eleicoes/:nome/mesas', wrap(async (req, res) => {
-  const loc = texto(req.body.localizacao, 200);
-  if (!loc) return bad(res, 'Indique a localização da mesa.');
-  await runAs(autor(req), (rq) => rq().input('e', sql.NVarChar(200), req.params.nome).input('l', sql.NVarChar(200), loc)
-    .query(`INSERT dbo.MesaDeVoto (eleicao, num_mesa, localizacao)
-            SELECT @e, ISNULL(MAX(num_mesa), 0) + 1, @l FROM dbo.MesaDeVoto WHERE eleicao = @e`));
-  res.status(201).json({ ok: true });
-}));
-router.delete('/eleicoes/:nome/mesas/:num', wrap(async (req, res) => {
-  await runAs(autor(req), async (rq) => {
-    const q = (t) => rq().input('e', sql.NVarChar(200), req.params.nome).input('m', sql.Int, Number(req.params.num)).query(t);
-    await q('DELETE FROM dbo.MembroMesa WHERE eleicao = @e AND num_mesa = @m');
-    await q('DELETE FROM dbo.MesaDeVoto WHERE eleicao = @e AND num_mesa = @m');
-  });
-  res.json({ ok: true });
-}));
-
-router.post('/eleicoes/:nome/mesas/:num/membros', wrap(async (req, res) => {
-  const funcao = texto(req.body.funcao, 100);
-  if (!nifOk(req.body.nif) || !funcao) return bad(res, 'Indique o NIF e a função.');
-  await runAs(autor(req), (rq) => rq().input('e', sql.NVarChar(200), req.params.nome).input('m', sql.Int, Number(req.params.num))
-    .input('n', sql.NVarChar(9), req.body.nif).input('f', sql.NVarChar(100), funcao)
-    .query('INSERT dbo.MembroMesa (eleicao, num_mesa, nif, funcao) VALUES (@e, @m, @n, @f)'));
-  res.status(201).json({ ok: true });
-}));
-router.delete('/eleicoes/:nome/mesas/:num/membros/:nif', wrap(async (req, res) => {
-  await runAs(autor(req), (rq) => rq().input('e', sql.NVarChar(200), req.params.nome).input('m', sql.Int, Number(req.params.num))
-    .input('n', sql.NVarChar(9), req.params.nif)
-    .query('DELETE FROM dbo.MembroMesa WHERE eleicao = @e AND num_mesa = @m AND nif = @n'));
-  res.json({ ok: true });
-}));
-
 /* ------------------------- RECENSEAMENTO --------------------------------- */
-// Recenseia todos os eleitores ativos ainda não inscritos, distribuindo-os pelas mesas
+// Recenseia todos os eleitores ativos que ainda não estejam inscritos na eleição
 router.post('/eleicoes/:nome/recenseamento', wrap(async (req, res) => {
   const n = await runAs(autor(req), async (rq) => {
-    const nm = await rq().input('e', sql.NVarChar(200), req.params.nome).query('SELECT COUNT(*) AS n FROM dbo.MesaDeVoto WHERE eleicao = @e');
-    if (!nm.recordset[0].n) lancar(50902, 'Crie primeiro pelo menos uma mesa de voto.');
-    const r = await rq().input('e', sql.NVarChar(200), req.params.nome).input('nm', sql.Int, nm.recordset[0].n).query(`
-      INSERT dbo.Recenseamento (eleicao, nif, num_mesa)
-      SELECT @e, x.nif, mm.num_mesa
-      FROM (SELECT el.nif, ROW_NUMBER() OVER (ORDER BY el.nif) AS rn
-            FROM dbo.Eleitor el
-            WHERE el.ativo = 1 AND NOT EXISTS (SELECT 1 FROM dbo.Recenseamento r WHERE r.eleicao = @e AND r.nif = el.nif)) x
-      JOIN (SELECT num_mesa, ROW_NUMBER() OVER (ORDER BY num_mesa) AS rn FROM dbo.MesaDeVoto WHERE eleicao = @e) mm
-        ON mm.rn = ((x.rn - 1) % @nm) + 1`);
+    const r = await rq().input('e', sql.NVarChar(200), req.params.nome).query(`
+      INSERT dbo.Recenseamento (eleicao, nif)
+      SELECT @e, el.nif FROM dbo.Eleitor el
+      WHERE el.ativo = 1
+        AND NOT EXISTS (SELECT 1 FROM dbo.Recenseamento r WHERE r.eleicao = @e AND r.nif = el.nif)`);
     return r.rowsAffected[0];
   });
   res.json({ recenseados: n });
@@ -231,13 +191,13 @@ router.get('/eleicoes/:nome/resultados', wrap(async (req, res) => {
   const info = await q('SELECT nome, estado, tipo_escrutinio FROM dbo.Eleicao WHERE nome = @e');
   if (!info.recordset.length) return res.status(404).json({ erro: 'Eleição não encontrada.' });
   const lista = info.recordset[0].tipo_escrutinio === 'Lista';
-  const [resu, part, mesas] = await Promise.all([
+  const [resu, part, afluencia] = await Promise.all([
     lista ? q('SELECT sigla AS opcao, designacao AS detalhe, votos, percentagem, mandatos FROM dbo.vw_ResultadosLista WHERE eleicao = @e ORDER BY votos DESC')
           : q('SELECT nome AS opcao, cargo AS detalhe, votos, percentagem, 0 AS mandatos FROM dbo.vw_ResultadosCandidato WHERE eleicao = @e ORDER BY cargo, votos DESC'),
     q('SELECT inscritos, votantes, abstencao, taxa_participacao, votos_brancos, votos_nulos FROM dbo.vw_ParticipacaoEleicao WHERE eleicao = @e'),
-    q('SELECT num_mesa, localizacao, inscritos, votantes, taxa_participacao FROM dbo.vw_ParticipacaoPorMesa WHERE eleicao = @e ORDER BY num_mesa'),
+    q('SELECT dia, hora, votantes FROM dbo.vw_AfluenciaHoraria WHERE eleicao = @e ORDER BY dia, hora'),
   ]);
-  res.json({ eleicao: info.recordset[0], resultados: resu.recordset, participacao: part.recordset[0], mesas: mesas.recordset });
+  res.json({ eleicao: info.recordset[0], resultados: resu.recordset, participacao: part.recordset[0], afluencia: afluencia.recordset });
 }));
 
 /* ------------------------------ ELEITORES -------------------------------- */

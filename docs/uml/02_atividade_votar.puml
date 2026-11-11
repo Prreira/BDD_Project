@@ -39,15 +39,15 @@ endif
 :Rever e confirmar;
 |Sistema|
 :Iniciar transação;
-:Inserir RegistoVoto (NIF, eleição, origem Automatica);
-:Inserir Voto(s) (mesa, sem ligação ao NIF);
+:Inserir RegistoVoto (NIF, eleição, hora);
+:Inserir Voto(s) (sem NIF e sem hora);
 if (Gatilhos e restrições OK?) then (não)
   :ROLLBACK;
   :Informar erro;
   |Eleitor|
   stop
 else (sim)
-  :COMMIT; atualizar num_votantes da mesa (G3);
+  :COMMIT; registar auditoria (G3);
 endif
 :Emitir comprovativo (hora + referência);
 |Eleitor|

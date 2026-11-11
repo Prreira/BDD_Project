@@ -15,7 +15,7 @@
 1. **Modelo (1 min):** `docs/referencia/Dados2.sql` → adaptação (tabela de alterações em `03_Modelo_de_Dados.md` §3.1); realçar `RegistoVoto` vs `Voto`.
 2. **Login do eleitor (2 min):** NIF → código gerado pela BD e mostrado no ecrã → entrar. Mostrar (terminal) que `CodigoAcesso` só guarda *hash*: `SELECT nif, estado, tentativas FROM dbo.CodigoAcesso`.
 3. **Votar (2 min):** Junta de Freguesia 2026 (lista) → confirmar → comprovativo → tentar votar de novo (recusado) → resultados da Legislativas 2024 (Hondt).
-4. **Administração (2 min):** painel em tempo real → eleições → criar uma eleição e percorrer cargos/listas/candidatos/mesas/recenseamento → iniciar.
+4. **Administração (2 min):** painel em tempo real → eleições → criar uma eleição e percorrer cargos/listas/candidatos/recenseamento → iniciar.
 5. **Base de dados (2 min):** `npm run sql -- ..\db\06_testes_gatilhos.sql` (todas `OK`) e algumas consultas (C2 Hondt, C7 divisão relacional, C10 acumulado).
 
 Perguntas prováveis: *como garantem o anonimato?* (tabelas separadas, sem hora, GUID; ver limites em 5.3) · *e se dois pedidos votarem ao mesmo tempo?* (PK `(eleicao, nif)` + transação) · *porque o código aparece no ecrã?* (sem serviços externos; o canal de entrega é trocável) · *o que muda face ao Dados2.sql?* (§3.1).
@@ -28,7 +28,7 @@ Perguntas prováveis: *como garantem o anonimato?* (tabelas separadas, sem hora,
 | Anonimato por separação lógica | Quem tiver acesso total à BD e a registos de rede pode tentar correlações temporais. Mitigado: `Voto` sem hora e com GUID aleatório. Futuro: cifra do voto / voto verificável. |
 | Sem HTTPS | Protótipo local; em produção, TLS obrigatório. |
 | Sessões em memória | Reiniciar o servidor termina as sessões; futuro: armazenamento persistente (Redis/BD). |
-| Voto presencial (`origem = 'Manual'`) | Previsto no modelo (e nos membros de mesa), sem interface. |
+| Sem voto presencial | O projeto é só online: as mesas de voto e a origem `Manual` do `Dados2.sql` original foram removidas (ver `03_Modelo_de_Dados.md` §3.1). |
 | Sem testes automáticos da aplicação | Existem testes SQL (`06`) e testes manuais registados no README (§Testes). |
 | Autenticação do administrador sem 2.º fator | Futuro: 2FA. |
 | Hondt com desempate simples | Empate de quocientes resolvido por votos e sigla; uninominais empatadas ficam sem vencedor (2.ª volta não implementada). |

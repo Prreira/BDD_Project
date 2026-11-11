@@ -34,17 +34,9 @@ entity "Eleitor" as E {
   nome, data_nascimento, ativo
   CHECK fn_NifValido(nif)
 }
-entity "MesaDeVoto" as M {
-  * eleicao : <<PK,FK>>
-  * num_mesa : <<PK>>
-  --
-  localizacao, num_votantes
-}
 entity "Recenseamento" as R {
   * eleicao : <<PK,FK>>
   * nif : <<PK,FK>>
-  --
-  num_mesa : <<FK>>
 }
 entity "Candidato" as C {
   * eleicao : <<PK,FK>>
@@ -54,20 +46,15 @@ entity "Candidato" as C {
   sigla_lista : <<FK, nulo>>
   posicao
 }
-entity "MembroMesa" as MM {
-  * eleicao, num_mesa, nif : <<PK,FK>>
-  --
-  funcao
-}
 entity "RegistoVoto" as RV {
   * eleicao, nif : <<PK,FK>>
   --
-  data_hora, origem
+  data_hora
 }
 entity "Voto" as V {
   * id_voto : UNIQUEIDENTIFIER <<PK>>
   --
-  eleicao, num_mesa : <<FK>>
+  eleicao : <<FK>>
   tipo_voto
   cargo, sigla_lista, nif_candidato : <<FK, nulos>>
 }
@@ -89,7 +76,7 @@ entity "LogAutenticacao" as LA {
   --
   nif_tentativa, data_hora, sucesso
   motivo_falha, etapa
-  eleicao, num_mesa : <<FK, nulos>>
+  eleicao : <<FK, nulo>>
 }
 entity "Auditoria" as AU {
   * id_log : BIGINT <<PK>>
@@ -100,21 +87,17 @@ entity "Auditoria" as AU {
 AD ||--o{ EL
 EL ||--|{ CG
 EL ||--o{ LI
-EL ||--|{ M
 EL ||--o{ R
 E  ||--o{ R
-M  ||--o{ R
 EL ||--o{ C
 E  ||--o{ C
 CG ||--o{ C
 LI |o--o{ C
-M  ||--o{ MM
-E  ||--o{ MM
 R  ||--o| RV
-M  ||--o{ V
+EL ||--o{ V
 LI |o--o{ V
 C  |o--o{ V
 EL ||--o{ RA
 E  ||--o{ CA
-M  |o--o{ LA
+EL |o--o{ LA
 @enduml

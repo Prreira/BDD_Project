@@ -47,9 +47,9 @@ DECLARE @e3 NVARCHAR(200) = N'Eleição da Junta de Freguesia 2027';
 /* ---- recenseamento dos eleitores novos nas eleições existentes ----------
    (a Presidencial já está Em Curso: o gatilho de bloqueio é desligado só
    durante esta carga de dados) */
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e3, nif, (n % 2) + 1 FROM #K WHERE n > 60;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e3, nif FROM #K WHERE n > 60;
 DISABLE TRIGGER dbo.trg_Recenseamento_Bloqueio ON dbo.Recenseamento;
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e2, nif, (n % 3) + 1 FROM #K WHERE n > 60;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e2, nif FROM #K WHERE n > 60;
 ENABLE TRIGGER dbo.trg_Recenseamento_Bloqueio ON dbo.Recenseamento;
 
 /* ---- 2 eleitores inativos ainda recenseados (para a consulta C13) ------ */
@@ -58,17 +58,17 @@ UPDATE dbo.Eleitor SET ativo = 0 WHERE nif IN (SELECT nif FROM #K WHERE n IN (29
 /* =====================================================================
    Presidencial 2026 (Em Curso): +120 votos nas últimas 22 horas
    ===================================================================== */
-SELECT k.n, k.nif, (k.n % 3) + 1 AS mesa,
+SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 5) AS BIGINT)) % 100 AS r,
        DATEADD(MINUTE, -(ABS(CAST(CHECKSUM(k.n, 11) AS BIGINT)) % 1300), GETDATE()) AS hora
 INTO #VA FROM #K k WHERE k.n BETWEEN 61 AND 180;
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
-INSERT dbo.RegistoVoto (eleicao, nif, data_hora, origem) SELECT @e2, nif, hora, 'Automatica' FROM #VA;
+INSERT dbo.RegistoVoto (eleicao, nif, data_hora) SELECT @e2, nif, hora FROM #VA;
 ENABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 
-INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, cargo, nif_candidato)
-SELECT @e2, v.mesa,
+INSERT dbo.Voto (eleicao, tipo_voto, cargo, nif_candidato)
+SELECT @e2,
        CASE WHEN v.r < 86 THEN 'Valido' WHEN v.r < 94 THEN 'Branco' ELSE 'Nulo' END,
        N'Presidente da República',
        CASE WHEN v.r < 38 THEN (SELECT nif FROM #K WHERE n = 58)
@@ -91,22 +91,19 @@ INSERT dbo.Candidato (eleicao, nif, cargo, sigla_lista, posicao)
 SELECT @e6, nif, N'Junta de Freguesia',
        CASE (n - 90) / 3 WHEN 0 THEN N'PH' WHEN 1 THEN N'AC' ELSE N'MV' END, ((n - 90) % 3) + 1
 FROM #K WHERE n BETWEEN 90 AND 98;
-INSERT dbo.MesaDeVoto (eleicao, num_mesa, localizacao) VALUES
- (@e6, 1, N'Sede da Junta de Freguesia'), (@e6, 2, N'Centro Comunitário'),
- (@e6, 3, N'Escola Básica n.º 2'), (@e6, 4, N'Pavilhão Desportivo');
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e6, nif, (n % 4) + 1 FROM #K;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e6, nif FROM #K;
 UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e6;
 
-SELECT k.n, k.nif, (k.n % 4) + 1 AS mesa,
+SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 7) AS BIGINT)) % 100 AS r,
        DATEADD(MINUTE, -(ABS(CAST(CHECKSUM(k.n, 13) AS BIGINT)) % 2400), GETDATE()) AS hora
 INTO #VB FROM #K k WHERE k.n BETWEEN 100 AND 249;
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
-INSERT dbo.RegistoVoto (eleicao, nif, data_hora, origem) SELECT @e6, nif, hora, 'Automatica' FROM #VB;
+INSERT dbo.RegistoVoto (eleicao, nif, data_hora) SELECT @e6, nif, hora FROM #VB;
 ENABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
-INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, sigla_lista)
-SELECT @e6, v.mesa, CASE WHEN v.r < 85 THEN 'Valido' WHEN v.r < 93 THEN 'Branco' ELSE 'Nulo' END,
+INSERT dbo.Voto (eleicao, tipo_voto, sigla_lista)
+SELECT @e6, CASE WHEN v.r < 85 THEN 'Valido' WHEN v.r < 93 THEN 'Branco' ELSE 'Nulo' END,
        CASE WHEN v.r < 35 THEN N'PH' WHEN v.r < 65 THEN N'AC' WHEN v.r < 85 THEN N'MV' END
 FROM #VB v;
 DROP TABLE #VB;
@@ -126,13 +123,10 @@ INSERT dbo.Candidato (eleicao, nif, cargo, sigla_lista, posicao)
 SELECT @e4, nif, N'Assembleia Distrital',
        CASE (n - 100) / 3 WHEN 0 THEN N'PH' WHEN 1 THEN N'AC' WHEN 2 THEN N'MV' WHEN 3 THEN N'IC' ELSE N'LB' END, ((n - 100) % 3) + 1
 FROM #K WHERE n BETWEEN 100 AND 114;
-INSERT dbo.MesaDeVoto (eleicao, num_mesa, localizacao) VALUES
- (@e4, 1, N'Escola Secundária'), (@e4, 2, N'Biblioteca Municipal'), (@e4, 3, N'Junta de Freguesia Central'),
- (@e4, 4, N'Pavilhão Municipal'), (@e4, 5, N'Centro Cultural');
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e4, nif, (n % 5) + 1 FROM #K WHERE n <= 280;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e4, nif FROM #K WHERE n <= 280;
 UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e4;
 
-SELECT k.n, k.nif, (k.n % 5) + 1 AS mesa,
+SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 5) AS BIGINT)) % 1000 AS r,
        DATEADD(MINUTE, ABS(CAST(CHECKSUM(k.n, 3) AS BIGINT)) % 720,
                DATEADD(HOUR, 8, CAST(CAST(DATEADD(DAY, -700, GETDATE()) AS DATE) AS DATETIME))) AS hora
@@ -140,12 +134,12 @@ INTO #VC FROM #K k WHERE k.n <= 280 AND ABS(CAST(CHECKSUM(k.n, 21) AS BIGINT)) %
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
-INSERT dbo.RegistoVoto (eleicao, nif, data_hora, origem) SELECT @e4, nif, hora, 'Automatica' FROM #VC;
+INSERT dbo.RegistoVoto (eleicao, nif, data_hora) SELECT @e4, nif, hora FROM #VC;
 ENABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 ENABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 
-INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, sigla_lista)
-SELECT @e4, v.mesa, CASE WHEN v.r < 960 THEN 'Valido' WHEN v.r < 985 THEN 'Branco' ELSE 'Nulo' END,
+INSERT dbo.Voto (eleicao, tipo_voto, sigla_lista)
+SELECT @e4, CASE WHEN v.r < 960 THEN 'Valido' WHEN v.r < 985 THEN 'Branco' ELSE 'Nulo' END,
        CASE WHEN v.r < 330 THEN N'PH' WHEN v.r < 600 THEN N'AC' WHEN v.r < 800 THEN N'MV'
             WHEN v.r < 920 THEN N'IC' WHEN v.r < 960 THEN N'LB' END
 FROM #VC v;
@@ -162,12 +156,10 @@ VALUES (@e5, N'Eleição do Presidente da República (histórico).',
         DATEADD(DAY, -1800, GETDATE()), DATEADD(DAY, -1799, GETDATE()), 'Uninominal', 1);
 INSERT dbo.Cargo (eleicao, cargo, num_mandatos) VALUES (@e5, N'Presidente da República', 1);
 INSERT dbo.Candidato (eleicao, nif, cargo) SELECT @e5, nif, N'Presidente da República' FROM #K WHERE n BETWEEN 120 AND 122;
-INSERT dbo.MesaDeVoto (eleicao, num_mesa, localizacao) VALUES
- (@e5, 1, N'Escola Secundária'), (@e5, 2, N'Biblioteca Municipal'), (@e5, 3, N'Pavilhão Municipal'), (@e5, 4, N'Centro Cultural');
-INSERT dbo.Recenseamento (eleicao, nif, num_mesa) SELECT @e5, nif, (n % 4) + 1 FROM #K WHERE n <= 200;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e5, nif FROM #K WHERE n <= 200;
 UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e5;
 
-SELECT k.n, k.nif, (k.n % 4) + 1 AS mesa,
+SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 8) AS BIGINT)) % 1000 AS r,
        DATEADD(MINUTE, ABS(CAST(CHECKSUM(k.n, 4) AS BIGINT)) % 720,
                DATEADD(HOUR, 8, CAST(CAST(DATEADD(DAY, -1800, GETDATE()) AS DATE) AS DATETIME))) AS hora
@@ -175,12 +167,12 @@ INTO #VD FROM #K k WHERE k.n <= 200 AND ABS(CAST(CHECKSUM(k.n, 22) AS BIGINT)) %
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
-INSERT dbo.RegistoVoto (eleicao, nif, data_hora, origem) SELECT @e5, nif, hora, 'Automatica' FROM #VD;
+INSERT dbo.RegistoVoto (eleicao, nif, data_hora) SELECT @e5, nif, hora FROM #VD;
 ENABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 ENABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 
-INSERT dbo.Voto (eleicao, num_mesa, tipo_voto, cargo, nif_candidato)
-SELECT @e5, v.mesa, CASE WHEN v.r < 930 THEN 'Valido' WHEN v.r < 970 THEN 'Branco' ELSE 'Nulo' END,
+INSERT dbo.Voto (eleicao, tipo_voto, cargo, nif_candidato)
+SELECT @e5, CASE WHEN v.r < 930 THEN 'Valido' WHEN v.r < 970 THEN 'Branco' ELSE 'Nulo' END,
        N'Presidente da República',
        CASE WHEN v.r < 430 THEN (SELECT nif FROM #K WHERE n = 120)
             WHEN v.r < 780 THEN (SELECT nif FROM #K WHERE n = 121)

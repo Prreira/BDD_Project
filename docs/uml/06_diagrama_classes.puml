@@ -36,14 +36,6 @@ class Lista {
 class Candidato {
   posicao : int [0..1]
 }
-class MesaDeVoto {
-  numMesa : int {id na eleição}
-  localizacao : string
-  numVotantes : int
-}
-class MembroMesa {
-  funcao : string
-}
 class Voto {
   idVoto : guid {id}
   tipoVoto : {Valido, Branco, Nulo}
@@ -77,14 +69,11 @@ class Auditoria {
 Administrador "0..1" -- "0..*" Eleicao : cria >
 Eleicao "1" *-- "1..*" Cargo
 Eleicao "1" *-- "0..*" Lista
-Eleicao "1" *-- "1..*" MesaDeVoto
 Eleitor "1" -- "0..*" Candidato : é >
 Eleicao "1" -- "0..*" Candidato
+Eleicao "1" -- "0..*" Voto : recebe >
 Cargo "1" -- "0..*" Candidato : concorre a >
 Lista "0..1" -- "0..*" Candidato : integra >
-MesaDeVoto "1" -- "0..*" MembroMesa
-Eleitor "1" -- "0..*" MembroMesa
-MesaDeVoto "1" -- "0..*" Voto : recolhe >
 Lista "0..1" -- "0..*" Voto : destino
 Candidato "0..1" -- "0..*" Voto : destino
 Eleicao "1" -- "0..*" ResultadoApuramento
@@ -94,11 +83,9 @@ Eleitor "0..*" -- "0..*" Eleicao
 class Recenseamento <<associação>> {
 }
 (Eleitor, Eleicao) .. Recenseamento : inscrito em
-Recenseamento "0..*" -- "1" MesaDeVoto : vota na >
 
 class RegistoVoto <<associação>> {
   dataHora : datetime
-  origem : {Automatica, Manual}
 }
 Recenseamento "1" -- "0..1" RegistoVoto : exerce voto >
 

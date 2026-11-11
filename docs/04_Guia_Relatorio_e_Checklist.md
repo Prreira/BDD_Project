@@ -26,7 +26,7 @@ Extensão PlantUML do VS Code → *Export Current Diagram* (PNG/SVG), ou <https:
 ## 4.4 Conclusões / trabalho futuro (sugestão)
 
 - Entrega real do código por SMS/email (basta trocar o canal: o procedimento já gera e valida o código) e/ou Chave Móvel Digital; HTTPS obrigatório e 2FA para administradores.
-- Voto verificável de ponta-a-ponta (cifra do voto, contagem pública verificável) e voto presencial (origem `Manual`).
+- Voto verificável de ponta-a-ponta (cifra do voto, contagem pública verificável) e voto presencial (exigiria voltar a modelar mesas de voto).
 - Replicação/alta disponibilidade, cópias de segurança, *Always Encrypted* e Row-Level Security.
 
 ## 4.5 Checklist de coerência (rever antes de entregar)
