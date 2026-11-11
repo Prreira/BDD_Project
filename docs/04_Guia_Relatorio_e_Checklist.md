@@ -34,7 +34,7 @@ Extensão PlantUML do VS Code → *Export Current Diagram* (PNG/SVG), ou <https:
 - [ ] Cada requisito RF tem um caso de uso UC e um ecrã (matriz em `01_Requisitos.md` §1.5).
 - [ ] Os nomes de tabelas/atributos são iguais no UML de classes, no ER, no modelo relacional e no script SQL (snake_case do `Dados2.sql`).
 - [ ] `npm run setup` corre numa BD vazia sem erros; `06_testes_gatilhos.sql` imprime só `OK`.
-- [ ] As 17 consultas correm (C13 e C14 devolvem 0 linhas por desenho: explicar no relatório).
+- [ ] As 17 consultas correm (C14 devolve 0 linhas por desenho: é a asserção de integridade; C13 devolve os 2 eleitores inativos ainda recenseados).
 - [ ] Anonimato do voto explicado (§3.2 do modelo) e visível na BD (`Voto` sem ligação ao eleitor, GUID).
 - [ ] Capturas de ecrã atuais (a eleição "Em Curso" depende da data a que correu o *seed*).
 - [ ] Cada elemento do grupo sabe explicar **todas** as partes (útil também para a defesa).
@@ -44,4 +44,5 @@ Extensão PlantUML do VS Code → *Export Current Diagram* (PNG/SVG), ou <https:
 - Se a "Presidencial 2026" tiver encerrado entre o *setup* e a demonstração, volte a correr `npm run setup` (recria tudo com datas relativas ao momento atual).
 - Para mostrar o código de acesso na BD: `SELECT nif, criado_em, expira_em, estado, tentativas FROM dbo.CodigoAcesso;` (só há *hash*, nunca o código).
 - Para mostrar o anonimato: `SELECT * FROM dbo.RegistoVoto; SELECT * FROM dbo.Voto;` — nenhuma coluna permite cruzar as duas.
+- Ver também `05_Apresentacao_e_Limitacoes.md` (roteiro, riscos e limitações).
 - Para mostrar a Hondt: `SELECT * FROM dbo.vw_ResultadosLista;` na eleição autárquica.

@@ -244,7 +244,7 @@ router.get('/eleicoes/:nome/resultados', wrap(async (req, res) => {
 router.get('/eleitores', wrap(async (req, res) => {
   const q = `%${String(req.query.q || '').trim().slice(0, 60)}%`;
   const r = await (await getPool()).request().input('q', sql.NVarChar(62), q).query(`
-    SELECT TOP 200 nif, nome, data_nascimento, ativo FROM dbo.Eleitor
+    SELECT TOP 500 nif, nome, data_nascimento, ativo FROM dbo.Eleitor
     WHERE nome LIKE @q OR nif LIKE @q ORDER BY nome`);
   res.json(r.recordset);
 }));

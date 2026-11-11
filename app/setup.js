@@ -7,7 +7,7 @@ const sql = require('mssql');
 const bcrypt = require('bcryptjs');
 const { config } = require('./db');
 
-const FICHEIROS = ['01_schema.sql', '02_gatilhos.sql', '03_vistas_procedimentos.sql', '04_dados_teste.sql'];
+const FICHEIROS = ['01_schema.sql', '02_gatilhos.sql', '03_vistas_procedimentos.sql', '04_dados_teste.sql', '07_dados_adicionais.sql'];
 const PASS_ADMIN = 'Admin#2026';
 
 (async () => {

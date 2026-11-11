@@ -1,30 +1,31 @@
 # eVoto — Como executar o projeto
 
-Trabalho prático de Bases de Dados. Aplicação web sobre **SQL Server**: página inicial com *login* único, **área do eleitor** (votar) e **área de administração** (dashboards e manutenção).
+Aplicação web (Node.js + Express) sobre **SQL Server**: *login* único, **área do eleitor** (votar) e **área de administração** (dashboards e manutenção). O eleitor entra com o **NIF** + **código de uso único** gerado pela base de dados e mostrado no próprio site (sem SMS/email).
 
-O eleitor entra com o **NIF** + **código de uso único**. Como não há serviços externos (SMS/email), o código é **gerado pela base de dados** e **aparece automaticamente no site** (notificação com a mensagem simulada, campo preenchido sozinho, validade de 3 minutos).
-
-## Estrutura do projeto
+## Estrutura
 
 ```
-BDD/
-├─ docs/referencia/Dados2.sql          Modelo original (ponto de partida da adaptação)
-├─ docs/
-│  ├─ 01_Requisitos.md                 Requisitos funcionais e não funcionais
-│  ├─ 02_Modelacao_UML_Requisitos.md   Casos de uso descritos + índice dos diagramas
-│  ├─ 03_Modelo_de_Dados.md            Adaptação do Dados2.sql, modelo relacional, gatilhos, queries
-│  ├─ 04_Guia_Relatorio_e_Checklist.md Estrutura sugerida do relatório e checklist
-│  └─ uml/*.puml                       Diagramas PlantUML
+BDD_Project/
+├─ README.md                           Descrição geral do projeto
+├─ iniciar.ps1                         Arranca a aplicação
+├─ preparar-apresentacao.ps1           Verifica requisitos, repõe os dados e arranca
+├─ docs/                               Requisitos, UML, modelo de dados, apresentação
+│  ├─ 00_Como_Executar.md              (este ficheiro)
+│  ├─ 01_Requisitos.md … 05_Apresentacao_e_Limitacoes.md
+│  ├─ uml/*.puml                       Diagramas PlantUML
+│  └─ referencia/                      Dados2.sql (modelo original) e README de planeamento original
 ├─ db/
 │  ├─ 01_schema.sql                    Recria a BD eVoto e as tabelas
 │  ├─ 02_gatilhos.sql                  Gatilhos (G1–G11)
 │  ├─ 03_vistas_procedimentos.sql      Vistas, NIF, código de acesso, votação, apuramento
-│  ├─ 04_dados_teste.sql               Dados de demonstração
+│  ├─ 04_dados_teste.sql               Dados base (60 eleitores, 3 eleições)
+│  ├─ 07_dados_adicionais.sql          Carga de volume (300 eleitores, 6 eleições, ~700 votos)
 │  ├─ 05_consultas.sql                 17 interrogações SQL
 │  └─ 06_testes_gatilhos.sql           Testes dos gatilhos e do código de acesso
-├─ app/                                Aplicação web (Node.js + Express)
-└─ iniciar.ps1                         Atalho para arrancar a aplicação
+└─ app/                                Aplicação web (server.js, routes/, public/, tools/)
 ```
+
+Ordem de execução da carga: `01 → 02 → 03 → 04 → 07` (feita por `npm run setup`). Os ficheiros `05` e `06` são para consulta e testes.
 
 ## Requisitos
 
@@ -43,31 +44,36 @@ npm install
 $env:DB_SERVER   = "localhost"
 $env:DB_USER     = "sa"
 $env:DB_PASSWORD = "a-sua-password"
-# $env:DB_INSTANCE = "SQLEXPRESS"   # se usar uma instância nomeada (sem porto)
+$env:DB_INSTANCE = "SQLEXPRESS"     # instância nomeada (sem porto); omitir se usar o porto 1433
 
 npm run setup     # RECRIA a BD eVoto (tabelas, gatilhos, vistas, dados) e define a password dos admins
 npm start         # http://localhost:3000
 ```
 
-**Atalho neste PC:** `.\iniciar.ps1` na raiz do projeto arranca a aplicação (liga a `localhost\SQLEXPRESS` com o utilizador `sa`; pede a password se `DB_PASSWORD` não estiver definida).
+**Atalhos neste PC** (a password do `sa` está na variável de utilizador `DB_PASSWORD`):
 
-Em alternativa ao `npm run setup`, corra `db/01…04` no SSMS (por ordem) e depois `npm run passwords` para definir a palavra-passe dos administradores.
+- `.\iniciar.ps1` — arranca a aplicação.
+- `.\preparar-apresentacao.ps1` — verifica Node.js e SQL Server, recria a BD com datas atuais e arranca.
+
+Em alternativa ao `npm run setup`, corra `db/01…04` e `db/07` no SSMS (por ordem) e depois `npm run passwords`.
+
+### Ver os scripts SQL sem o SSMS
+
+```powershell
+cd app
+npm run sql -- ..\db\06_testes_gatilhos.sql
+npm run sql -- ..\db\05_consultas.sql
+```
 
 ### Contas de demonstração
 
 | Perfil | Como entrar |
 |---|---|
-| **Eleitor** | No separador *Eleitor*, clique em "preencher NIF de teste" (ou use o NIF que o `npm run setup` mostra no fim, ex.: `231079192`) → *Pedir código de acesso* → o código aparece numa notificação e preenche-se sozinho → *Entrar*. |
+| **Eleitor** | Separador *Sou eleitor* → "preencher NIF de teste" (ou um NIF mostrado no fim do `npm run setup`) → *Pedir código de acesso* → o código aparece numa notificação e preenche-se sozinho → *Entrar*. |
 | **Administrador** | Separador *Administração*: `admin1@evoto.pt` / `Admin#2026` (também `admin2@evoto.pt`). |
 
-Os NIF dos eleitores são válidos (dígito de controlo). O modo em que o código é mostrado no ecrã é só para demonstração (`OTP_MODO=ecra`, por omissão); com outro valor o código deixa de ser devolvido ao browser e teria de ser entregue por um canal externo.
-
-### Demonstração sugerida
-
-1. **Eleitor:** NIF → código no ecrã → ver eleições → votar na presidencial → comprovativo → tentar votar de novo → ver resultados da autárquica (mandatos por Hondt).
-2. **Administrador:** painel (gráficos em tempo real, participação por mesa) → criar eleição → cargos, listas, candidatos, mesas, recenseamento → iniciar → encerrar → apurar. Ver *Autenticações* e *Auditoria*.
-3. **SSMS / terminal:** `db/06_testes_gatilhos.sql` (todas as linhas `OK`) e `db/05_consultas.sql`.
+Os NIF dos eleitores são válidos (dígito de controlo). O modo em que o código é mostrado no ecrã é só para demonstração (`OTP_MODO=ecra`, por omissão).
 
 ## Segurança implementada
 
-NIF validado (formato e dígito de controlo); código de uso único com *hash* SHA-256 salgado, validade de 3 min, 3 tentativas e limite de pedidos; bcrypt para administradores; sessões `HttpOnly` + `SameSite=Strict`; perfil verificado no servidor (HTTP 403); queries parametrizadas; escape de HTML no cliente; **anonimato do voto** por desenho da BD (ver `03_Modelo_de_Dados.md`).
+NIF validado; código de uso único com *hash* SHA-256 salgado, validade de 3 min, 3 tentativas e limite de pedidos; bcrypt para administradores; sessões `HttpOnly` + `SameSite=Strict`; perfil verificado no servidor (HTTP 403); queries parametrizadas; escape de HTML no cliente; **anonimato do voto** por desenho da BD (ver `03_Modelo_de_Dados.md`). Limitações em `05_Apresentacao_e_Limitacoes.md`.

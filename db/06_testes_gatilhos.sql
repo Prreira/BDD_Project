@@ -133,9 +133,10 @@ PRINT N'--- Caso de SUCESSO: voto válido de um eleitor que ainda não votou (de
 BEGIN TRY
     BEGIN TRAN;
     EXEC dbo.sp_RegistarVoto @livre, @pres, @json;
+    DECLARE @antes INT = (SELECT COUNT(*) FROM dbo.RegistoVoto WHERE eleicao = @pres) - 1;
     DECLARE @n INT = (SELECT COUNT(*) FROM dbo.RegistoVoto WHERE eleicao = @pres);
     DECLARE @m INT = (SELECT SUM(num_votantes) FROM dbo.MesaDeVoto WHERE eleicao = @pres);
-    PRINT N'OK  voto registado; registos = ' + CAST(@n AS NVARCHAR(10)) + N', soma dos contadores das mesas = ' + CAST(@m AS NVARCHAR(10)) + N' (eram 22).';
+    PRINT N'OK  voto registado; registos = ' + CAST(@n AS NVARCHAR(10)) + N', soma dos contadores das mesas = ' + CAST(@m AS NVARCHAR(10)) + N' (antes: ' + CAST(@antes AS NVARCHAR(10)) + N').';
     ROLLBACK;
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'FALHOU: ' + ERROR_MESSAGE(); END CATCH;

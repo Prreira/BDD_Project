@@ -6,6 +6,7 @@
   "scripts": {
     "setup": "node setup.js",
     "passwords": "node setup.js --passwords",
+    "sql": "node tools/executar-sql.js",
     "start": "node server.js"
   },
   "engines": { "node": ">=18" },

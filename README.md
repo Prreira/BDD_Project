@@ -2,7 +2,9 @@
 
 **Projeto de Desenvolvimento de uma Aplicação Web de Votação Online**
 
-O **eVoto** é uma aplicação web desenvolvida para permitir a realização e gestão de eleições simuladas através de uma plataforma digital.
+O **eVoto** é uma aplicação web para a realização e gestão de eleições simuladas. O eleitor entra com o **NIF** e um **código de uso único**; a administração entra com email e palavra-passe. Os dados estão em **Microsoft SQL Server**.
+
+> 📌 **Nota:** a versão inicial deste README (planeamento com ASP.NET Core MVC e Entity Framework) está guardada em [`docs/referencia/README_planeamento_original.md`](docs/referencia/README_planeamento_original.md). A implementação final usa **Node.js + Express** sobre SQL Server, e o modelo de dados parte de [`docs/referencia/Dados2.sql`](docs/referencia/Dados2.sql). Este documento descreve o que foi **efetivamente implementado**.
 
 ---
 
@@ -11,7 +13,7 @@ O **eVoto** é uma aplicação web desenvolvida para permitir a realização e g
 1. [Descrição do Projeto](#-descrição-do-projeto)
 2. [Objetivos](#-objetivos)
 3. [Tecnologias Utilizadas](#-tecnologias-utilizadas)
-4. [Instalação e Configuração](#-instalação-e-configuração)
+4. [Instalação e Execução](#-instalação-e-execução)
 5. [Arquitetura do Sistema](#-arquitetura-do-sistema)
 6. [Funcionalidades](#-funcionalidades)
 7. [Requisitos do Sistema](#-requisitos-do-sistema)
@@ -22,40 +24,30 @@ O **eVoto** é uma aplicação web desenvolvida para permitir a realização e g
 12. [Interfaces Gráficas](#-interfaces-gráficas)
 13. [Estrutura do Projeto](#-estrutura-do-projeto)
 14. [Testes](#-testes)
-15. [Planeamento do Desenvolvimento](#-planeamento-do-desenvolvimento)
+15. [Estado do Desenvolvimento](#-estado-do-desenvolvimento)
 16. [Critérios de Avaliação](#-critérios-de-avaliação)
 17. [Documentação e Entregáveis](#-documentação-e-entregáveis)
-18. [Considerações de Segurança](#-considerações-de-segurança)
+18. [Considerações de Segurança e Limitações](#-considerações-de-segurança-e-limitações)
 
 ---
 
 ## 📖 Descrição do Projeto
 
-O **eVoto** é uma aplicação web desenvolvida com o objetivo de permitir a realização e gestão de eleições através de uma plataforma digital.
+A página inicial tem um *login* com dois acessos:
 
-O sistema disponibiliza uma página inicial com autenticação, permitindo que diferentes tipos de utilizadores acedam às funcionalidades correspondentes às suas permissões.
+- **Eleitor** — identifica-se com o **NIF** (validado pelo dígito de controlo). O sistema **gera automaticamente** um código de 6 dígitos, de uso único e válido 3 minutos, e **mostra-o no próprio site** numa notificação (mensagem simulada), preenchendo o campo. Não são usados serviços externos (SMS/email). Depois de autenticado, o eleitor consulta as suas eleições, vota e recebe um comprovativo.
+- **Administrador** — entra com email e palavra-passe e acede a dashboards em tempo real e à manutenção de eleições, listas, candidatos, mesas de voto, recenseamento e eleitores.
 
-Existem dois perfis principais:
-
-- **Eleitor:** pode consultar as eleições em que está inscrito, visualizar os candidatos e exercer o seu direito de voto.
-- **Administrador:** pode gerir eleições, candidatos e eleitores, assim como consultar dashboards, estatísticas e resultados eleitorais.
-
-A aplicação utiliza uma base de dados Microsoft SQL Server para armazenar e gerir toda a informação necessária ao funcionamento do sistema.
+Suporta eleições por **Lista** (mandatos distribuídos pelo método de Hondt) e **Uninominais** (um ou mais cargos).
 
 ## 🎯 Objetivos
 
-Os principais objetivos do projeto são:
-
-- Desenvolver uma aplicação web funcional para votação online.
-- Implementar um sistema de autenticação e controlo de acessos.
-- Permitir a gestão de eleições e candidatos.
-- Permitir aos eleitores votar de forma simples e intuitiva.
-- Impedir que um eleitor vote mais do que uma vez na mesma eleição.
-- Garantir a integridade e consistência dos dados.
-- Implementar mecanismos de validação através de constraints e triggers SQL.
-- Desenvolver consultas SQL para obtenção de estatísticas e resultados.
-- Construir dashboards para administração e acompanhamento das eleições.
-- Aplicar conceitos de modelação UML e bases de dados relacionais.
+- Aplicação web funcional para votação online com controlo de acessos.
+- Impedir que um eleitor vote mais do que uma vez na mesma eleição (garantido pela própria base de dados).
+- **Anonimato do voto:** participação e voto em tabelas sem qualquer ligação.
+- Integridade e consistência através de constraints, **gatilhos**, vistas e procedimentos.
+- Consultas SQL para estatísticas e resultados; dashboards de acompanhamento.
+- Modelação UML e modelo relacional.
 
 ---
 
@@ -63,928 +55,267 @@ Os principais objetivos do projeto são:
 
 | Tecnologia | Utilização |
 |---|---|
-| C# | Linguagem de programação principal |
-| ASP.NET Core MVC | Desenvolvimento da aplicação web |
-| .NET 10 | Plataforma de desenvolvimento |
-| HTML5 | Estrutura das páginas |
-| CSS3 | Estilização das interfaces |
-| Bootstrap | Design responsivo |
-| JavaScript | Interatividade das páginas |
-| Microsoft SQL Server | Sistema de gestão da base de dados |
-| SQL Server Management Studio | Administração e consulta da base de dados |
-| Entity Framework Core | Comunicação entre a aplicação e a base de dados |
-| ASP.NET Core Identity | Autenticação e gestão de utilizadores |
-| diagrams.net | Criação dos diagramas UML |
-| Git e GitHub | Controlo de versões e colaboração |
+| Node.js 18+ / Express | Servidor e API |
+| `mssql` (tedious) | Ligação ao SQL Server (queries parametrizadas e procedimentos) |
+| `bcryptjs`, `express-session` | Palavras-passe de administradores e sessões |
+| HTML5, CSS3, JavaScript | Interfaces (sem frameworks) |
+| Chart.js | Gráficos do painel de administração |
+| Microsoft SQL Server (2016 SP1+, Express serve) | Base de dados, gatilhos, vistas e procedimentos |
+| PlantUML | Diagramas UML (`docs/uml`) |
+| Git e GitHub | Controlo de versões |
 
 ---
 
-## ⚙️ Instalação e Configuração
+## ⚙️ Instalação e Execução
 
-### 1. Programas necessários
-
-Antes de iniciar o desenvolvimento, devem ser instalados os seguintes programas:
-
-| Programa | Finalidade | Ligação |
-|---|---|---|
-| Visual Studio Community | Desenvolvimento da aplicação | https://visualstudio.microsoft.com/downloads/ |
-| .NET 10 SDK | Compilação e execução do projeto | https://dotnet.microsoft.com/download/dotnet/10.0 |
-| SQL Server Developer | Motor da base de dados | https://www.microsoft.com/en-us/sql-server/sql-server-downloads |
-| SQL Server Management Studio | Gestão da base de dados | https://learn.microsoft.com/en-us/ssms/download-sql-server-management-studio-ssms |
-| diagrams.net | Modelação UML | https://app.diagrams.net/ |
-| Git | Controlo de versões | https://git-scm.com/downloads |
-
-No Visual Studio, durante a instalação, deve ser selecionada a carga de trabalho:
-
-**ASP.NET and web development**
-
-### 2. Verificar a instalação do .NET
-
-Abrir o CMD ou PowerShell e executar:
-
-```bash
-dotnet --version
-```
-
-Deve ser apresentada uma versão correspondente ao .NET 10.
-
-### 3. Criar a base de dados
-
-Abrir o SQL Server Management Studio e estabelecer ligação ao servidor local.
-
-Utilizar:
-
-- Server Type: Database Engine
-- Server Name: `localhost`
-- Authentication: Windows Authentication
-
-Executar o seguinte comando:
-
-```sql
-CREATE DATABASE eVotoDB;
-GO
-```
-
-### 4. Criar o projeto no Visual Studio
-
-1. Abrir o Visual Studio.
-2. Selecionar `Create a new project`.
-3. Procurar `ASP.NET Core Web App (Model-View-Controller)`.
-4. Definir o nome do projeto como `eVoto`.
-5. Definir o nome da solução como `eVoto`.
-6. Selecionar .NET 10.
-7. Configurar a autenticação como `Individual Accounts`.
-8. Ativar HTTPS.
-9. Criar o projeto.
-
-### 5. Instalar os pacotes necessários
-
-Abrir a Package Manager Console no Visual Studio e executar:
+Instruções completas em [`docs/00_Como_Executar.md`](docs/00_Como_Executar.md). Resumo, no PowerShell:
 
 ```powershell
-Install-Package Microsoft.EntityFrameworkCore.SqlServer
-Install-Package Microsoft.EntityFrameworkCore.Tools
+cd app
+npm install
+
+$env:DB_SERVER   = "localhost"
+$env:DB_INSTANCE = "SQLEXPRESS"        # instância nomeada (omitir se usar o porto 1433)
+$env:DB_USER     = "sa"
+$env:DB_PASSWORD = "a-sua-password"
+
+npm run setup        # RECRIA a BD eVoto (tabelas, gatilhos, vistas, 300 eleitores, 6 eleições)
+npm start            # http://localhost:3000
 ```
 
-Os pacotes devem utilizar versões compatíveis com o .NET 10 e com a versão do Entity Framework Core utilizada pelo projeto.
+Atalhos na raiz do projeto: `.\iniciar.ps1` (arranca) e `.\preparar-apresentacao.ps1` (verifica requisitos, repõe os dados com datas atuais e arranca).
 
-### 6. Configurar a ligação ao SQL Server
+**Contas de demonstração**
 
-No ficheiro `appsettings.json`, configurar a connection string:
+| Perfil | Como entrar |
+|---|---|
+| Eleitor | separador *Sou eleitor* → "preencher NIF de teste" → *Pedir código* → o código aparece no ecrã e preenche-se sozinho |
+| Administrador | `admin1@evoto.pt` / `Admin#2026` |
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=eVotoDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
-  }
-}
-```
-
-A configuração do `ApplicationDbContext` deve utilizar o fornecedor SQL Server (`UseSqlServer`).
-
-### 7. Criar e atualizar a base de dados
-
-Na Package Manager Console:
+Executar os scripts SQL e mostrar os resultados no terminal (alternativa ao SSMS):
 
 ```powershell
-Add-Migration InitialCreate
-Update-Database
+npm run sql -- ..\db\06_testes_gatilhos.sql
+npm run sql -- ..\db\05_consultas.sql
 ```
-
-Estas operações criam e atualizam a estrutura da base de dados através do Entity Framework Core.
-
-Os scripts adicionais de SQL, nomeadamente triggers e stored procedures, devem ser executados posteriormente no SQL Server Management Studio.
 
 ---
 
 ## 🏗️ Arquitetura do Sistema
 
-A aplicação segue uma arquitetura baseada em ASP.NET Core MVC.
-
-A comunicação entre os diferentes componentes é organizada da seguinte forma:
-
 ```text
-                  UTILIZADOR
-                      |
-                      |
-                 INTERFACE WEB
-             HTML / CSS / Bootstrap
-                      |
-                      |
-              ASP.NET CORE MVC
-                      |
-          ---------------------------
-          |             |           |
-      CONTROLLERS    SERVICES     MODELS
-          |             |           |
-          ---------------------------
-                      |
-                      |
-              ENTITY FRAMEWORK
-                      |
-                      |
-              MICROSOFT SQL SERVER
-                      |
-          ---------------------------
-          |             |           |
-        TABELAS      TRIGGERS   PROCEDURES
+                    UTILIZADOR
+                        |
+              INTERFACE WEB (HTML/CSS/JS)
+        login · área do eleitor · administração
+                        |  fetch (JSON)
+                EXPRESS (Node.js)
+     sessões · perfis (403) · validação · limitação de pedidos
+                        |  mssql (queries parametrizadas / EXEC)
+                  MICROSOFT SQL SERVER
+        ┌───────────────┼────────────────┬───────────────┐
+      TABELAS        GATILHOS         VISTAS      PROCEDIMENTOS
+   (Dados2 adaptado)  (G1–G11)    (dashboards)  (código, voto, apuramento)
 ```
 
-### Componentes principais
-
-- **Models:** representam as entidades e os dados utilizados pela aplicação.
-- **Controllers:** recebem os pedidos dos utilizadores e controlam as operações da aplicação.
-- **Views:** representam as páginas apresentadas aos utilizadores.
-- **Services:** implementam a lógica de negócio, incluindo as validações do processo de votação.
-- **Data:** contém a configuração e o acesso à base de dados.
-- **Entity Framework Core:** permite comunicar com o SQL Server através de entidades e operações C#.
+A lógica crítica (um voto por eleitor, anonimato, estados, apuramento, código de acesso) está **na base de dados**; o servidor valida, autentica e traduz pedidos.
 
 ---
 
 ## 🔐 Funcionalidades
 
-### Área de autenticação
-
-- Login através de email e palavra-passe.
-- Validação das credenciais.
-- Identificação do perfil do utilizador.
-- Redirecionamento automático para a área correspondente.
-- Terminar sessão.
-- Controlo de acessos através de funções (Roles).
+### Autenticação
+- Eleitor: NIF + código de uso único (3 min, 3 tentativas, máx. 5 pedidos / 10 min, tudo registado).
+- Administrador: email + palavra-passe (bcrypt), bloqueio após 5 falhas.
+- Perfis separados e verificados no servidor; sessão com expiração aos 30 min.
 
 ### Área do eleitor
-
-O eleitor poderá:
-
-- Iniciar sessão.
-- Consultar eleições em que está inscrito.
-- Consultar informações das eleições.
-- Visualizar os candidatos.
-- Selecionar um candidato.
-- Confirmar a intenção de voto.
-- Submeter o voto.
-- Receber uma confirmação da participação.
-- Consultar se já participou numa eleição.
+- Consultar eleições em que está recenseado (estado, período, mesa) com filtros.
+- Votar: lista (ou candidato por cargo), voto em branco ou nulo; confirmação; comprovativo (hora + referência, sem o sentido do voto).
+- Consultar resultados das eleições apuradas.
 
 ### Área de administração
-
-O administrador poderá:
-
-- Consultar o dashboard administrativo.
-- Criar eleições.
-- Editar eleições.
-- Abrir e encerrar eleições.
-- Consultar eleições existentes.
-- Adicionar candidatos.
-- Editar candidatos.
-- Gerir eleitores.
-- Inscrever eleitores em eleições.
-- Consultar o número de eleitores inscritos.
-- Consultar o número de votos recebidos.
-- Consultar resultados eleitorais.
-- Consultar estatísticas e gráficos.
-- Consultar registos de auditoria.
-
-### Regras de funcionamento
-
-1. Cada utilizador tem um perfil e permissões específicas.
-2. Um eleitor apenas pode votar em eleições nas quais esteja inscrito.
-3. Um eleitor apenas pode votar em eleições abertas.
-4. Um eleitor apenas pode submeter um voto por eleição.
-5. Depois de submetido, o voto não pode ser alterado através das operações normais da aplicação.
-6. Os administradores podem gerir eleições e candidatos de acordo com o estado da eleição.
-7. Os resultados devem ser calculados através de consultas à base de dados.
-8. O sistema deve impedir acessos não autorizados às funcionalidades administrativas.
+- Painel em tempo real: indicadores, resultados por opção, participação, participação por mesa.
+- Gerir eleições, cargos, listas, candidatos, mesas, membros de mesa e recenseamento.
+- Iniciar, encerrar e **apurar** (Hondt nas listas); abertura/encerramento automático por calendário.
+- Gerir eleitores (NIF); consultar auditoria e registo de autenticações.
 
 ### Estados de uma eleição
-
-| Estado | Descrição |
-|---|---|
-| Rascunho | Eleição em preparação |
-| Agendada | Eleição criada, com data futura |
-| Aberta | Eleição disponível para votação |
-| Encerrada | Eleição terminada |
-| Arquivada | Eleição concluída, disponível apenas para consulta |
+`Agendada → Em Curso → Encerrada → Apurada` (a estrutura só é editável enquanto Agendada).
 
 ---
 
 ## 📝 Requisitos do Sistema
 
-### Requisitos funcionais
-
-| ID | Descrição |
-|---|---|
-| RF01 | O sistema deve permitir iniciar sessão. |
-| RF02 | O sistema deve identificar o perfil do utilizador. |
-| RF03 | O sistema deve direcionar o utilizador para a respetiva área. |
-| RF04 | O eleitor deve poder consultar as eleições em que está inscrito. |
-| RF05 | O eleitor deve poder consultar os candidatos. |
-| RF06 | O eleitor deve poder submeter um voto. |
-| RF07 | O sistema deve impedir votos duplicados por eleitor e eleição. |
-| RF08 | O sistema deve confirmar a submissão do voto. |
-| RF09 | O administrador deve poder criar e gerir eleições. |
-| RF10 | O administrador deve poder gerir candidatos. |
-| RF11 | O administrador deve poder gerir eleitores. |
-| RF12 | O administrador deve poder inscrever eleitores em eleições. |
-| RF13 | O administrador deve poder abrir e encerrar eleições. |
-| RF14 | O sistema deve apresentar resultados e estatísticas. |
-| RF15 | O sistema deve registar operações administrativas. |
-| RF16 | O sistema deve permitir terminar sessão. |
-
-### Requisitos não funcionais
-
-| ID | Descrição |
-|---|---|
-| RNF01 | O sistema deve implementar autenticação. |
-| RNF02 | As palavras-passe devem ser armazenadas através de hashing seguro. |
-| RNF03 | O sistema deve separar os privilégios de eleitores e administradores. |
-| RNF04 | A submissão dos votos deve ser transacional. |
-| RNF05 | O sistema deve impedir votos em eleições encerradas. |
-| RNF06 | A interface deve ser responsiva. |
-| RNF07 | O sistema deve apresentar mensagens de erro claras. |
-| RNF08 | A base de dados deve garantir integridade referencial. |
-| RNF09 | A aplicação deve utilizar HTTPS quando publicada. |
-| RNF10 | A identidade do eleitor não deve estar diretamente associada à opção de voto na tabela de boletins. |
-| RNF11 | A interface deve ser intuitiva e de fácil utilização. |
-| RNF12 | A base de dados deve permitir a realização de cópias de segurança. |
+Especificação completa (20 requisitos funcionais, 12 não funcionais, regras de negócio e matriz de rastreabilidade) em [`docs/01_Requisitos.md`](docs/01_Requisitos.md).
 
 ---
 
 ## 📐 Modelação UML
 
-A modelação UML será utilizada para representar o funcionamento e a estrutura da aplicação antes e durante o desenvolvimento.
+Descrição dos casos de uso em [`docs/02_Modelacao_UML_Requisitos.md`](docs/02_Modelacao_UML_Requisitos.md). Diagramas PlantUML em [`docs/uml`](docs/uml):
 
-Os diagramas previstos são:
-
-### 1. Diagrama de casos de utilização
-
-Identifica os atores e as funcionalidades da aplicação.
-
-**Atores:**
-- Eleitor.
-- Administrador.
-
-**Casos de utilização do eleitor:**
-- Iniciar sessão.
-- Consultar eleições.
-- Consultar candidatos.
-- Votar.
-- Confirmar voto.
-- Consultar participação.
-- Terminar sessão.
-
-**Casos de utilização do administrador:**
-- Iniciar sessão.
-- Consultar dashboard.
-- Gerir eleições.
-- Gerir candidatos.
-- Gerir eleitores.
-- Inscrever eleitores.
-- Abrir eleições.
-- Encerrar eleições.
-- Consultar resultados.
-- Consultar auditoria.
-- Terminar sessão.
-
-### 2. Diagrama de atividades
-
-Representa o processo de votação, desde a autenticação até à confirmação da submissão.
-
-Deve incluir:
-
-- Validação das credenciais.
-- Identificação do perfil.
-- Consulta da eleição.
-- Verificação da inscrição.
-- Verificação da participação anterior.
-- Verificação do estado da eleição.
-- Seleção do candidato.
-- Confirmação.
-- Registo do voto.
-
-### 3. Diagrama de sequência
-
-Representa a comunicação entre:
-
-- Eleitor.
-- Interface Web.
-- Controller.
-- Serviço de votação.
-- Base de dados.
-
-Deve demonstrar os pedidos e respostas necessários para a submissão de um voto.
-
-### 4. Diagrama de classes
-
-Representa as principais classes da aplicação:
-
-- ApplicationUser.
-- Eleitor.
-- Eleicao.
-- Candidato.
-- InscricaoEleitor.
-- Boletim.
-- RegistoAuditoria.
-
-### 5. Diagrama entidade-relacionamento
-
-Representa as entidades da base de dados e as respetivas relações.
-
-### 6. Modelo relacional
-
-Apresenta as tabelas, atributos, chaves primárias e chaves estrangeiras.
+| Ficheiro | Diagrama |
+|---|---|
+| `01_casos_de_uso.puml` | Casos de uso |
+| `02_atividade_votar.puml` | Atividades: autenticar e votar |
+| `03_atividade_gerir_eleicao.puml` | Atividades: preparar e apurar uma eleição |
+| `04_sequencia_votar.puml` | Sequência: autenticação e votação |
+| `05_estados_eleicao.puml` | Estados da eleição |
+| `06_diagrama_classes.puml` | Modelo conceptual (classes) |
+| `07_modelo_relacional_er.puml` | Modelo relacional (ER) |
 
 ---
 
 ## 🗄️ Modelo da Base de Dados
 
-A base de dados será implementada em Microsoft SQL Server com o nome:
+Base de dados **`eVoto`**. Detalhe (alterações ao `Dados2.sql`, modelo relacional, normalização) em [`docs/03_Modelo_de_Dados.md`](docs/03_Modelo_de_Dados.md).
 
-`eVotoDB`
-
-### Tabelas principais
-
-#### 1. AspNetUsers
-
-Tabela de autenticação gerida pelo ASP.NET Core Identity.
-
-Principais atributos:
-
-- Id (PK).
-- Email.
-- UserName.
-- PasswordHash.
-
-O sistema Identity também utiliza outras tabelas para gerir funções, permissões e autenticação.
-
-#### 2. Eleitor
-
-Armazena os dados dos eleitores.
-
-| Atributo | Descrição |
+| Tabela | Função |
 |---|---|
-| EleitorId (PK) | Identificador do eleitor |
-| UserId (FK) | Referência ao utilizador Identity |
-| Nome | Nome do eleitor |
+| `Eleicao`, `Cargo`, `Lista`, `Candidato` | Eleições, cargos (com mandatos), listas e candidatos |
+| `Eleitor` (NIF), `MesaDeVoto`, `Recenseamento`, `MembroMesa` | Eleitores, mesas e quem vota onde |
+| **`RegistoVoto`** | Prova **que** o eleitor votou — PK `(eleicao, nif)` impede o duplo voto |
+| **`Voto`** | O voto, **sem ligação ao eleitor** (sem NIF, sem hora, GUID aleatório) |
+| `ResultadoApuramento` | Votos e mandatos (Hondt) |
+| `Administrador`, `CodigoAcesso`, `Auditoria` | Novas: login da administração, códigos de uso único (só hash), auditoria |
+| `LogAutenticacao` | Todas as tentativas de autenticação |
 
-#### 3. Eleicao
-
-Armazena as informações das eleições.
-
-| Atributo | Descrição |
-|---|---|
-| EleicaoId (PK) | Identificador da eleição |
-| Titulo | Nome da eleição |
-| Descricao | Descrição |
-| DataInicio | Data de início |
-| DataFim | Data de fim |
-| Estado | Estado da eleição |
-
-#### 4. Candidato
-
-Armazena os candidatos associados às eleições.
-
-| Atributo | Descrição |
-|---|---|
-| CandidatoId (PK) | Identificador do candidato |
-| EleicaoId (FK) | Eleição a que pertence |
-| Nome | Nome do candidato |
-| Descricao | Informação do candidato |
-
-#### 5. InscricaoEleitor
-
-Relaciona os eleitores com as eleições em que estão inscritos.
-
-| Atributo | Descrição |
-|---|---|
-| EleicaoId (PK, FK) | Identificador da eleição |
-| EleitorId (PK, FK) | Identificador do eleitor |
-| JaVotou | Indica se já participou |
-
-A chave primária é composta por `EleicaoId` e `EleitorId`.
-
-#### 6. Boletim
-
-Armazena os votos submetidos.
-
-| Atributo | Descrição |
-|---|---|
-| BoletimId (PK) | Identificador do boletim |
-| EleicaoId (FK) | Eleição correspondente |
-| CandidatoId (FK) | Candidato selecionado |
-
-A tabela não deve guardar diretamente o identificador do eleitor, permitindo separar a informação de participação da opção de voto.
-
-Deve existir uma chave estrangeira composta que assegure que o candidato pertence à eleição indicada no boletim.
-
-#### 7. RegistoAuditoria
-
-Armazena operações administrativas.
-
-| Atributo | Descrição |
-|---|---|
-| RegistoId (PK) | Identificador do registo |
-| UserId (FK) | Utilizador responsável |
-| Acao | Operação executada |
-| DataHora | Data e hora da operação |
-| Detalhes | Informação complementar |
-
-### Relações entre as tabelas
-
-| Relação | Cardinalidade |
-|---|---|
-| Utilizador — Eleitor | 1 : 0..1 |
-| Eleição — Candidato | 1 : N |
-| Eleição — InscriçãoEleitor | 1 : N |
-| Eleitor — InscriçãoEleitor | 1 : N |
-| Eleição — Boletim | 1 : N |
-| Candidato — Boletim | 1 : N |
-| Utilizador — RegistoAuditoria | 1 : N |
-
-### Normalização
-
-A estrutura da base de dados deverá respeitar as formas normais:
-
-- **1FN:** utilização de atributos atómicos.
-- **2FN:** dependência funcional dos atributos não-chave da totalidade da chave primária.
-- **3FN:** eliminação de dependências transitivas desnecessárias.
+Principais alterações ao modelo original: tabelas novas (`Administrador`, `CodigoAcesso`, `Auditoria`), `Eleitor.data_nascimento/ativo` e validação do NIF, `Cargo.num_mandatos`, e `Voto.id_voto` passou de `IDENTITY` a GUID para que a ordem dos votos não permita descobrir em quem cada pessoa votou.
 
 ---
 
 ## 🔒 Regras de Integridade e Triggers
 
-A base de dados deverá implementar mecanismos de controlo e validação para garantir a consistência dos dados.
+Ficheiro [`db/02_gatilhos.sql`](db/02_gatilhos.sql) (testes em `db/06_testes_gatilhos.sql`):
 
-### Constraints
+| Id | Gatilho | Regra |
+|---|---|---|
+| G1 | `trg_RegistoVoto_Validar` | Eleição Em Curso e no prazo; eleitor ativo |
+| G2 | `trg_RegistoVoto_Imutavel` | Registos de voto imutáveis |
+| G3 | `trg_RegistoVoto_Mesa` | Mantém `MesaDeVoto.num_votantes` |
+| G4 | `trg_RegistoVoto_Auditoria` | Regista que alguém votou (nunca o sentido) |
+| G5 | `trg_Voto_Validar` | Só em eleição Em Curso; destino conforme o escrutínio |
+| G6 | `trg_Voto_Imutavel` | Votos imutáveis |
+| G7 | `trg_*_Bloqueio` (6 tabelas) | Estrutura só muda com a eleição Agendada |
+| G8 | `trg_Candidato_Coerencia` | Lista obrigatória (Lista) ou proibida (Uninominal) |
+| G9 | `trg_Eleicao_Estado` | Transições válidas, requisitos para iniciar, dados congelados |
+| G10 | `trg_Eleicao_Auditoria` | Auditoria com o autor |
+| G11 | `trg_Eleitor_Idade` | Idade mínima 18 anos |
 
-Devem ser implementadas:
+Asserções declarativas: `CK_Eleitor_Nif` (dígito de controlo), `CK_Voto_Destino`, FKs compostas; asserção global `vw_Integridade` (votos = votantes), exigida no apuramento.
 
-- Primary Keys.
-- Foreign Keys.
-- UNIQUE.
-- CHECK.
-- NOT NULL.
-
-Exemplos de regras:
-
-- Não permitir datas finais anteriores às datas iniciais.
-- Não permitir estados de eleição inválidos.
-- Não permitir inscrições duplicadas.
-- Não permitir relações entre boletins e candidatos de eleições diferentes.
-- Não permitir identificadores duplicados.
-
-### Trigger 1 — Validar a eleição
-
-Nome: `TR_Boletim_ValidarEleicao`
-
-Objetivo:
-
-Impedir que sejam inseridos boletins quando a eleição não está aberta ou quando a data atual está fora do período permitido.
-
-### Trigger 2 — Impedir alterações aos boletins
-
-Nome: `TR_Boletim_Imutavel`
-
-Objetivo:
-
-Impedir operações de alteração ou eliminação de boletins já submetidos.
-
-### Stored Procedure — Registar voto
-
-Nome: `SP_RegistarVoto`
-
-Objetivo:
-
-Executar o processo de votação de forma transacional.
-
-A procedure deverá:
-
-1. Receber os identificadores do eleitor, eleição e candidato.
-2. Validar se o eleitor está inscrito.
-3. Verificar se já votou.
-4. Verificar se a eleição está aberta.
-5. Verificar se o candidato pertence à eleição.
-6. Marcar a inscrição como utilizada.
-7. Inserir o boletim.
-8. Confirmar a transação.
-
-Deve utilizar mecanismos de controlo de concorrência, como transações e bloqueios apropriados, para impedir a submissão duplicada de votos em pedidos simultâneos.
-
-### Testes aos triggers
-
-| Teste | Resultado esperado |
-|---|---|
-| Inserir voto numa eleição aberta | Permitido |
-| Inserir voto numa eleição encerrada | Rejeitado |
-| Inserir voto fora do período | Rejeitado |
-| Alterar um boletim | Rejeitado |
-| Eliminar um boletim | Rejeitado |
+**Procedimentos:** `sp_GerarCodigoAcesso`, `sp_ValidarCodigoAcesso`, `sp_RegistarVoto` (transacional, JSON de escolhas), `sp_AtualizarEstadosEleicoes`, `sp_ApurarEleicao` (integridade + Hondt). **Vistas:** `vw_ResultadosLista`, `vw_ResultadosCandidato`, `vw_ParticipacaoEleicao`, `vw_ParticipacaoPorMesa`, `vw_Integridade`.
 
 ---
 
 ## 📊 Interrogações SQL
 
-Serão desenvolvidas pelo menos 12 consultas SQL, com diferentes níveis de complexidade.
+[`db/05_consultas.sql`](db/05_consultas.sql) — 17 consultas, cada uma com enunciado e técnica:
 
-As consultas deverão demonstrar a utilização de:
-
-- SELECT.
-- WHERE.
-- INNER JOIN.
-- LEFT JOIN.
-- GROUP BY.
-- HAVING.
-- ORDER BY.
-- COUNT.
-- SUM.
-- Subconsultas.
-- CTE.
-- Funções de janela.
-
-### Consultas previstas
-
-| Nº | Consulta | Objetivo |
+| Nº | Objetivo | Técnica |
 |---|---|---|
-| 01 | Eleições abertas | Consultar eleições disponíveis |
-| 02 | Candidatos por eleição | Consultar os candidatos |
-| 03 | Votos por candidato | Contabilizar os votos |
-| 04 | Taxa de participação | Calcular a percentagem de participação |
-| 05 | Eleitores que ainda não votaram | Consultar participações pendentes |
-| 06 | Eleições com mais de um candidato | Identificar eleições elegíveis |
-| 07 | Candidatos sem votos | Identificar candidatos sem participação |
-| 08 | Eleições por eleitor | Contabilizar as inscrições |
-| 09 | Eleição com mais votos | Identificar a eleição mais participada |
-| 10 | Classificação de candidatos | Ordenar candidatos por votação |
-| 11 | Histórico administrativo | Consultar operações registadas |
-| 12 | Eleitores inscritos | Consultar participantes de uma eleição |
+| C1 | Eleições em curso com mesas/recenseados | JOIN, GROUP BY |
+| C2 | Classificação e mandatos das listas | `RANK()` |
+| C3 | Participação e abstenção por eleição | vista |
+| C4 | Eleitores que ainda não votaram | `NOT EXISTS` |
+| C5 | Participação por mesa | vista, LEFT JOIN |
+| C6 | Listas acima da média | subconsulta correlacionada |
+| C7 | Eleitores que votaram em todas as eleições encerradas | divisão relacional |
+| C8 | Participação por escalão etário | CASE, agregação condicional |
+| C9 | Vencedor por cargo das eleições apuradas | CTE + `ROW_NUMBER()` |
+| C10 | Afluência por hora com acumulado | `SUM() OVER` |
+| C11 | % de brancos e nulos | agregação condicional |
+| C12 | Atividade na auditoria por autor | GROUP BY |
+| C13 | Inativos ainda recenseados | JOIN múltiplo |
+| C14 | Asserção de integridade (0 linhas) | vista |
+| C15 | Mesas com maior abstenção | `DENSE_RANK()` |
+| C16 | Autenticações falhadas nas últimas 24 h | JOIN, GROUP BY, HAVING, subconsulta |
+| C17 | Composição de cada lista | JOIN de 3 tabelas |
 
-Cada consulta deverá ser acompanhada de:
-
-- Objetivo.
-- Código SQL.
-- Conceitos utilizados.
-- Resultado obtido.
-
-Os resultados eleitorais deverão ser calculados através de queries à base de dados.
+Dados de demonstração (`db/04_dados_teste.sql` + `db/07_dados_adicionais.sql`): **300 eleitores** com NIF válido, **6 eleições** (2 em curso, 1 agendada, 3 apuradas) e cerca de 700 votos.
 
 ---
 
 ## 🎨 Interfaces Gráficas
 
-A aplicação eVoto terá diferentes páginas consoante o perfil do utilizador.
+Estilo baseado no exemplo da equipa (barra superior, menu lateral azul-escuro, banner, cartões), responsivo.
 
-### 1. Página inicial e Login
-
-Deve apresentar:
-
-- Logótipo e identidade visual do eVoto.
-- Campo de email.
-- Campo de palavra-passe.
-- Botão de autenticação.
-- Mensagens de erro.
-
-### 2. Dashboard do Eleitor
-
-Deve apresentar:
-
-- Mensagem de boas-vindas.
-- Eleições disponíveis.
-- Estado das eleições.
-- Indicação de participação.
-- Acesso à consulta das eleições.
-
-### 3. Consulta de Eleição
-
-Deve apresentar:
-
-- Informação da eleição.
-- Lista de candidatos.
-- Descrições dos candidatos.
-- Opção de seleção.
-- Botão de confirmação.
-
-### 4. Confirmação do Voto
-
-Deve apresentar:
-
-- Mensagem de sucesso.
-- Confirmação de participação.
-- Botão de regresso ao dashboard.
-
-### 5. Dashboard Administrativo
-
-Deve apresentar:
-
-- Total de eleições.
-- Eleições abertas.
-- Total de eleitores inscritos.
-- Total de votos.
-- Gráficos de resultados.
-- Gráficos de participação.
-- Eleições recentes.
-
-### 6. Gestão de Eleições
-
-Deve permitir:
-
-- Consultar eleições.
-- Criar eleições.
-- Editar eleições.
-- Abrir e encerrar eleições.
-- Consultar candidatos e inscrições.
-
-### 7. Gestão de Candidatos
-
-Deve permitir:
-
-- Adicionar candidatos.
-- Editar candidatos.
-- Remover candidatos quando permitido.
-- Associar candidatos a eleições.
-
-### 8. Gestão de Eleitores
-
-Deve permitir:
-
-- Criar eleitores.
-- Editar informação.
-- Consultar eleitores.
-- Inscrever eleitores em eleições.
-- Consultar participação.
-
-### 9. Resultados
-
-Deve apresentar:
-
-- Total de votos.
-- Votos por candidato.
-- Percentagem de votos.
-- Taxa de participação.
-- Resultados por eleição.
+1. **Entrada** — duas colunas; separadores *Sou eleitor* / *Administração*; passo 1 (NIF) e passo 2 (código com contagem decrescente e **notificação com o código**).
+2. **Área do eleitor** — banner de boas-vindas, filtros por estado, cartões de eleições.
+3. **Boletim de voto** — cartões de listas/candidatos, branco e nulo; confirmação; comprovativo.
+4. **Resultados** (eleição apurada) — votos, percentagens e mandatos.
+5. **Painel de administração** — indicadores e gráficos em tempo real.
+6. **Gestão de eleições** — janela com dados, cargos, listas, candidatos, mesas, recenseamento e estado.
+7. **Eleitores**, **Autenticações** e **Auditoria**.
 
 ---
 
 ## 📁 Estrutura do Projeto
 
-A estrutura proposta para a aplicação é:
-
 ```text
-eVoto/
-│
-├── Controllers/
-│   ├── HomeController.cs
-│   ├── EleitorController.cs
-│   ├── AdminController.cs
-│   ├── EleicaoController.cs
-│   └── DashboardController.cs
-│
-├── Models/
-│   ├── ApplicationUser.cs
-│   ├── Eleitor.cs
-│   ├── Eleicao.cs
-│   ├── Candidato.cs
-│   ├── InscricaoEleitor.cs
-│   ├── Boletim.cs
-│   └── RegistoAuditoria.cs
-│
-├── Data/
-│   └── ApplicationDbContext.cs
-│
-├── Services/
-│   └── ServicoVotacao.cs
-│
-├── Views/
-│   ├── Home/
-│   ├── Eleitor/
-│   ├── Admin/
-│   ├── Eleicao/
-│   └── Dashboard/
-│
-├── wwwroot/
-│   ├── css/
-│   ├── js/
-│   └── images/
-│
-├── Database/
-│   └── Scripts/
-│       ├── 01_Constraints.sql
-│       ├── 02_Triggers.sql
-│       ├── 03_StoredProcedures.sql
-│       ├── 04_Views.sql
-│       ├── 05_Queries.sql
-│       └── 06_DadosTeste.sql
-│
-├── Migrations/
-│
-├── appsettings.json
-├── Program.cs
-└── eVoto.sln
+BDD_Project/
+├─ README.md
+├─ iniciar.ps1                       Arranca a aplicação
+├─ preparar-apresentacao.ps1         Verifica requisitos, repõe dados e arranca
+├─ app/                              Node.js + Express
+│  ├─ server.js · db.js · util.js · setup.js
+│  ├─ routes/ (eleitor.js, admin.js)
+│  ├─ tools/executar-sql.js          Corre .sql e mostra resultados no terminal
+│  └─ public/ (index.html, eleitor.html, admin.html, css/, js/, img/)
+├─ db/                               Scripts SQL (01 → 04 → 07; 05 consultas; 06 testes)
+└─ docs/                             Requisitos, UML, modelo de dados, apresentação
+   ├─ uml/*.puml
+   └─ referencia/ (Dados2.sql, README_planeamento_original.md)
 ```
-
-Esta estrutura poderá ser ajustada durante o desenvolvimento, conforme a evolução da aplicação.
 
 ---
 
 ## 🧪 Testes
 
-Serão efetuados testes funcionais, testes de integridade da base de dados e testes de permissões.
-
-### Testes de autenticação
-
-| Teste | Resultado esperado |
-|---|---|
-| Login válido de eleitor | Acesso à área do eleitor |
-| Login válido de administrador | Acesso à área administrativa |
-| Login com palavra-passe incorreta | Mensagem de erro |
-| Eleitor tenta aceder à administração | Acesso recusado |
-| Administrador tenta utilizar a área de eleitor | Acesso recusado |
-
-### Testes de votação
-
-| Teste | Resultado esperado |
-|---|---|
-| Eleitor inscrito vota numa eleição aberta | Voto registado |
-| Eleitor não inscrito tenta votar | Operação recusada |
-| Eleitor tenta votar duas vezes | Operação recusada |
-| Eleitor tenta votar numa eleição encerrada | Operação recusada |
-| Eleitor tenta votar fora do período | Operação recusada |
-| Submissão simultânea de votos | Apenas uma submissão aceite |
-
-### Testes administrativos
-
-| Teste | Resultado esperado |
-|---|---|
-| Criar uma eleição | Eleição criada |
-| Criar um candidato | Candidato criado |
-| Criar um eleitor | Eleitor criado |
-| Inscrever eleitor | Inscrição criada |
-| Consultar dashboard | Indicadores corretos |
-| Consultar resultados | Resultados corretos |
-
-### Testes da base de dados
-
-| Teste | Resultado esperado |
-|---|---|
-| Inserir eleição com datas inválidas | Operação rejeitada |
-| Inserir inscrição duplicada | Operação rejeitada |
-| Alterar boletim | Operação rejeitada |
-| Eliminar boletim | Operação rejeitada |
-| Inserir candidato de outra eleição no boletim | Operação rejeitada |
-
-Todos os testes deverão ser documentados e acompanhados de capturas de ecrã sempre que possível.
+- **Gatilhos e restrições:** `db/06_testes_gatilhos.sql` — 21 verificações (voto duplicado, eleição não aberta, imutabilidade, estrutura bloqueada, NIF inválido, menor de idade, código de acesso…). Todas devem imprimir `OK`.
+- **Aplicação (executados manualmente):** login de eleitor e administrador, perfis (403), voto em eleição por Lista e uninominal com 1 e 2 cargos, segundo voto recusado, código errado/expirado/reutilizado, limite de pedidos, ciclo de vida completo de uma eleição até ao apuramento, páginas em computador e telemóvel.
 
 ---
 
-## 📅 Planeamento do Desenvolvimento
+## 🧭 Estado do Desenvolvimento
 
-O desenvolvimento será dividido em quatro fases principais.
-
-### Semana 1 — Planeamento e modelação
-
-- Instalação das ferramentas.
-- Especificação dos requisitos.
-- Definição das funcionalidades.
-- Diagrama de casos de utilização.
-- Diagrama de atividades.
-- Diagrama de sequência.
-- Diagrama de classes.
-- Diagrama entidade-relacionamento.
-- Modelo relacional.
-
-**Objetivo:** concluir a documentação inicial e a modelação.
-
-### Semana 2 — Base de dados e backend
-
-- Criação da base de dados.
-- Criação das tabelas.
-- Definição das relações.
-- Implementação de constraints.
-- Implementação de triggers.
-- Implementação de stored procedures.
-- Inserção dos dados de teste.
-- Criação da aplicação MVC.
-- Ligação ao SQL Server.
-- Implementação da autenticação.
-
-**Objetivo:** ter a base de dados e o backend preparados.
-
-### Semana 3 — Desenvolvimento das interfaces
-
-- Página inicial e login.
-- Dashboard do eleitor.
-- Processo de votação.
-- Confirmação de voto.
-- Dashboard administrativo.
-- Gestão de eleições.
-- Gestão de candidatos.
-- Gestão de eleitores.
-- Dashboards e gráficos.
-
-**Objetivo:** obter uma aplicação funcional.
-
-### Semana 4 — Consultas SQL, testes e documentação
-
-- Implementação das 12 consultas SQL.
-- Testes funcionais.
-- Testes de integridade.
-- Testes de permissões.
-- Correção de erros.
-- Revisão dos diagramas.
-- Capturas de ecrã.
-- Organização dos ficheiros.
-- Finalização do README.
-
-**Objetivo:** preparar a versão final do projeto.
+Implementado: modelo de dados, gatilhos, vistas, procedimentos, dados de demonstração, consultas, aplicação web (eleitor e administração) e documentação. Em falta para a entrega: relatório final com diagramas exportados e capturas de ecrã (ver `docs/04_Guia_Relatorio_e_Checklist.md`). Limitações assumidas em `docs/05_Apresentacao_e_Limitacoes.md`.
 
 ---
 
 ## 📈 Critérios de Avaliação
 
-O projeto será desenvolvido tendo em consideração os seguintes critérios:
-
-| Critério | Peso |
-|---|---:|
-| Especificação de requisitos funcionais e não funcionais | 5% |
-| Modelação UML de requisitos | 15% |
-| Modelação UML da base de dados e modelo relacional | 15% |
-| Gatilhos e/ou asserções | 10% |
-| Interrogações SQL à base de dados | 15% |
-| Interfaces gráficas | 10% |
-| Defesa oral | 30% |
-
-**Total dos critérios técnicos considerados neste planeamento: 70%.**
-
-A defesa oral não está incluída no âmbito deste plano de desenvolvimento.
+| Critério | Peso | Onde |
+|---|---:|---|
+| Especificação de requisitos funcionais e não funcionais | 5% | `docs/01_Requisitos.md` |
+| Modelação UML de requisitos | 15% | `docs/02_*.md`, `docs/uml/01–05` |
+| Modelação UML da BD e modelo relacional | 15% | `docs/03_Modelo_de_Dados.md`, `docs/uml/06–07`, `db/01_schema.sql` |
+| Gatilhos e/ou asserções | 10% | `db/02_gatilhos.sql`, `db/06_testes_gatilhos.sql` |
+| Interrogações SQL | 15% | `db/05_consultas.sql` |
+| Interfaces gráficas | 10% | `app/public` |
+| Defesa oral | 30% | — |
 
 ---
 
 ## 📦 Documentação e Entregáveis
 
-A entrega final deverá incluir:
-
-```text
-Documentacao/
-│
-├── 01_Especificacao_Requisitos.pdf
-├── 02_UML_Casos_Utilizacao.pdf
-├── 03_UML_Atividades.pdf
-├── 04_UML_Sequencia.pdf
-├── 05_UML_Classes.pdf
-├── 06_Modelo_ER.pdf
-├── 07_Modelo_Relacional.pdf
-├── 08_Triggers_Procedures.sql
-├── 09_Consultas_SQL.sql
-├── 10_Plano_Testes.pdf
-│
-├── CapturasEcra/
-│
-└── Aplicacao/
-    └── eVoto.sln
-```
-
-O projeto deverá também incluir um ficheiro README com instruções para instalação, configuração e execução da aplicação.
+| Documento | Conteúdo |
+|---|---|
+| `docs/00_Como_Executar.md` | Instalação, arranque, demonstração |
+| `docs/01_Requisitos.md` | Requisitos |
+| `docs/02_Modelacao_UML_Requisitos.md` | Casos de uso descritos |
+| `docs/03_Modelo_de_Dados.md` | Modelo relacional, normalização, gatilhos, consultas |
+| `docs/04_Guia_Relatorio_e_Checklist.md` | Estrutura do relatório e checklist |
+| `docs/05_Apresentacao_e_Limitacoes.md` | Roteiro de demonstração, riscos e limitações |
 
 ---
 
-## 🛡️ Considerações de Segurança
+## 🛡️ Considerações de Segurança e Limitações
 
-O eVoto é um protótipo académico destinado a eleições simuladas.
+Medidas: NIF validado; código de uso único com hash salgado, validade e tentativas limitadas; bcrypt; sessões `HttpOnly` + `SameSite=Strict`; perfis verificados no servidor; queries parametrizadas; escape de HTML; transações na votação; separação entre participação e voto; auditoria.
 
-Devem ser consideradas as seguintes medidas:
-
-- Utilização de autenticação segura.
-- Armazenamento de palavras-passe através de hashing.
-- Separação dos privilégios dos utilizadores.
-- Proteção das páginas administrativas.
-- Validação dos dados no servidor.
-- Utilização de consultas SQL parametrizadas.
-- Proteção contra SQL Injection.
-- Proteção contra pedidos não autorizados.
-- Registo de operações administrativas.
-- Utilização de transações na submissão dos votos.
-- Separação entre a informação de participação e a opção de voto.
-
-A ausência de uma relação direta entre eleitor e boletim é uma medida de separação lógica de dados, mas não garante anonimato absoluto. Esta aplicação não está certificada nem preparada para eleições reais ou oficiais.
+O eVoto é um **protótipo académico** para eleições simuladas. A separação entre `RegistoVoto` e `Voto` é uma medida de separação lógica, **não** garante anonimato absoluto (quem tiver acesso total à BD e aos registos de rede poderia tentar correlações). Limitações conhecidas: o código de acesso é mostrado no ecrã em vez de enviado por SMS/email; sem HTTPS nem cifra do voto; sessões em memória; voto presencial (`origem = 'Manual'`) previsto só no modelo. Ver `docs/05_Apresentacao_e_Limitacoes.md`.
 
 ---
 
@@ -1002,14 +333,6 @@ A ausência de uma relação direta entre eleitor e boletim é uma medida de sep
 **Instituição:** [Nome da instituição]
 
 **Ano letivo:** 2026/2027
-
----
-
-## 📌 Estado do Projeto
-
-Projeto em desenvolvimento.
-
-As funcionalidades, documentação e estrutura apresentadas neste README correspondem ao planeamento previsto e deverão ser atualizadas à medida que forem implementadas e testadas.
 
 ---
 

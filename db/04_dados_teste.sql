@@ -1,6 +1,6 @@
 /* =====================================================================
    04_dados_teste.sql : dados de demonstração
-   - 2 administradores, 60 eleitores (NIF válidos), 3 eleições:
+   - 2 administradores, 60 eleitores (NIF válidos), 3 eleições (o 07_dados_adicionais.sql acrescenta volume):
        1) Autárquicas 2025   (Lista, Apurada)    - histórica, com mandatos por Hondt
        2) Presidencial 2026  (Uninominal, Em Curso)
        3) Junta de Freguesia 2027 (Lista, Agendada)
@@ -23,7 +23,7 @@ INSERT dbo.Administrador (email, nome, password_hash, nivel_acesso) VALUES
 EXEC sp_set_session_context N'autor', N'ADMIN:1';
 
 /* ---- 60 eleitores com NIF válido (#E guarda o nº de ordem -> NIF) ---- */
-CREATE TABLE #E (n INT PRIMARY KEY, nif NVARCHAR(9) NOT NULL, nome NVARCHAR(150) NOT NULL);
+CREATE TABLE #E (n INT PRIMARY KEY, nif NVARCHAR(9) COLLATE DATABASE_DEFAULT NOT NULL, nome NVARCHAR(150) COLLATE DATABASE_DEFAULT NOT NULL);
 
 DECLARE @nomes TABLE (i INT, n NVARCHAR(30));
 INSERT @nomes VALUES (0,N'Ana'),(1,N'Bruno'),(2,N'Carla'),(3,N'Diogo'),(4,N'Eva'),
@@ -106,7 +106,7 @@ EXEC dbo.sp_ApurarEleicao @e1;
 DECLARE @e2 NVARCHAR(200) = N'Eleição Presidencial 2026';
 INSERT dbo.Eleicao (nome, descricao, data_inicio, data_fim, tipo_escrutinio, id_admin_criador)
 VALUES (@e2, N'Eleição do Presidente da República. Vote uma única vez.',
-        DATEADD(DAY, -1, GETDATE()), DATEADD(DAY, 30, GETDATE()), 'Uninominal', 1);
+        DATEADD(DAY, -1, GETDATE()), DATEADD(DAY, 180, GETDATE()), 'Uninominal', 1);
 
 INSERT dbo.Cargo (eleicao, cargo, num_mandatos) VALUES (@e2, N'Presidente da República', 1);
 INSERT dbo.Candidato (eleicao, nif, cargo) SELECT @e2, nif, N'Presidente da República' FROM #E WHERE n BETWEEN 58 AND 60;

@@ -86,7 +86,9 @@ app.get('/api/auth/demo', wrap(async (req, res) => {
     SELECT TOP 1 el.nif FROM dbo.Eleitor el
     JOIN dbo.Recenseamento r ON r.nif = el.nif
     JOIN dbo.Eleicao e ON e.nome = r.eleicao AND e.estado = 'Em Curso'
-    WHERE el.ativo = 1 AND NOT EXISTS (SELECT 1 FROM dbo.RegistoVoto rv WHERE rv.eleicao = r.eleicao AND rv.nif = el.nif)
+    WHERE el.ativo = 1
+      AND NOT EXISTS (SELECT 1 FROM dbo.RegistoVoto rv JOIN dbo.Eleicao e2 ON e2.nome = rv.eleicao AND e2.estado = 'Em Curso'
+                      WHERE rv.nif = el.nif)
       AND NOT EXISTS (SELECT 1 FROM dbo.Candidato c WHERE c.nif = el.nif)
     ORDER BY el.nome`);
   if (!r.recordset.length) return res.status(404).json({ erro: 'Sem eleitores de teste disponíveis.' });
