@@ -40,7 +40,6 @@ JOIN @pn p ON p.i = (k.n - 1) % 20
 JOIN @sn s ON s.i = ((k.n - 1) / 20) % 20
 WHERE k.n > 60;
 
-DECLARE @e1 NVARCHAR(200) = N'Eleições Autárquicas 2025 - Assembleia Municipal';
 DECLARE @e2 NVARCHAR(200) = N'Eleição Presidencial 2026';
 DECLARE @e3 NVARCHAR(200) = N'Eleição da Junta de Freguesia 2027';
 

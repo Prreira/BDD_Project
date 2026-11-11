@@ -31,9 +31,5 @@ function errorHandler(err, req, res, next) {
   res.status(500).json({ erro: 'Erro interno do servidor.' });
 }
 
-function inteiro(v) {
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : null;
-}
 
-module.exports = { wrap, requireRole, requirePage, errorHandler, inteiro };
+module.exports = { wrap, requireRole, requirePage, errorHandler };

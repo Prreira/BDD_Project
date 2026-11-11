@@ -18,8 +18,7 @@ const config = {
 if (process.env.DB_INSTANCE) { config.options.instanceName = process.env.DB_INSTANCE; delete config.port; }
 
 let poolPromise = null;
-function getPool(cfg = config) {
-  if (cfg !== config) return new sql.ConnectionPool(cfg).connect();
+function getPool() {
   if (!poolPromise) {
     poolPromise = new sql.ConnectionPool(config).connect().catch((e) => {
       poolPromise = null;
