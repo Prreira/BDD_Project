@@ -1,0 +1,109 @@
+@startuml
+title eVoto - Modelo conceptual (diagrama de classes UML)
+hide methods
+skinparam classAttributeIconSize 0
+
+class Eleitor {
+  nif : string(9) {id}
+  nome : string
+  dataNascimento : date
+  ativo : boolean
+}
+class Administrador {
+  idAdmin : int {id}
+  email : string {unique}
+  nome : string
+  passwordHash : string
+  nivelAcesso : {1, 2}
+  ativo : boolean
+}
+class Eleicao {
+  nome : string {id}
+  descricao : string [0..1]
+  dataInicio : datetime
+  dataFim : datetime
+  tipoEscrutinio : {Lista, Uninominal}
+  estado : {Agendada, Em Curso,\nEncerrada, Apurada}
+}
+class Cargo {
+  cargo : string {id na eleição}
+  numMandatos : int
+}
+class Lista {
+  sigla : string {id na eleição}
+  designacao : string
+}
+class Candidato {
+  posicao : int [0..1]
+}
+class MesaDeVoto {
+  numMesa : int {id na eleição}
+  localizacao : string
+  numVotantes : int
+}
+class MembroMesa {
+  funcao : string
+}
+class Voto {
+  idVoto : guid {id}
+  tipoVoto : {Valido, Branco, Nulo}
+}
+class ResultadoApuramento {
+  numVotos : int
+  numMandatos : int
+}
+class CodigoAcesso {
+  hashCodigo : binary(32)
+  criadoEm : datetime
+  expiraEm : datetime
+  estado : {Pendente, Usado,\nExpirado, Anulado}
+  tentativas : int
+}
+class LogAutenticacao {
+  identificador : string
+  dataHora : datetime
+  sucesso : boolean
+  motivoFalha : string [0..1]
+  etapa : {Codigo, Validacao, Admin}
+}
+class Auditoria {
+  dataHora : datetime
+  autor : string
+  acao : string
+  entidade : string
+  detalhe : string [0..1]
+}
+
+Administrador "0..1" -- "0..*" Eleicao : cria >
+Eleicao "1" *-- "1..*" Cargo
+Eleicao "1" *-- "0..*" Lista
+Eleicao "1" *-- "1..*" MesaDeVoto
+Eleitor "1" -- "0..*" Candidato : é >
+Eleicao "1" -- "0..*" Candidato
+Cargo "1" -- "0..*" Candidato : concorre a >
+Lista "0..1" -- "0..*" Candidato : integra >
+MesaDeVoto "1" -- "0..*" MembroMesa
+Eleitor "1" -- "0..*" MembroMesa
+MesaDeVoto "1" -- "0..*" Voto : recolhe >
+Lista "0..1" -- "0..*" Voto : destino
+Candidato "0..1" -- "0..*" Voto : destino
+Eleicao "1" -- "0..*" ResultadoApuramento
+Eleitor "1" -- "0..*" CodigoAcesso : recebe >
+Eleitor "0..*" -- "0..*" Eleicao
+
+class Recenseamento <<associação>> {
+}
+(Eleitor, Eleicao) .. Recenseamento : inscrito em
+Recenseamento "0..*" -- "1" MesaDeVoto : vota na >
+
+class RegistoVoto <<associação>> {
+  dataHora : datetime
+  origem : {Automatica, Manual}
+}
+Recenseamento "1" -- "0..1" RegistoVoto : exerce voto >
+
+note bottom of Voto
+  ANONIMATO: Voto não referencia o Eleitor.
+  RegistoVoto só prova QUE votou.
+end note
+@enduml

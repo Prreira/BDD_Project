@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eVoto - Área do Eleitor</title>
+  <link rel="icon" type="image/jpeg" href="/img/icon2.jpeg">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="cabecalho"></div>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Menu do eleitor">
+      <h5>As minhas eleições</h5>
+      <nav class="nav" id="nav"></nav>
+    </aside>
+
+    <main id="conteudo" class="content">
+      <!-- LISTA DE ELEIÇÕES -->
+      <section id="vistaLista">
+        <div class="hero">
+          <div><h1 id="saudacao">Olá</h1>
+            <p>Estas são as eleições em que está recenseado. O seu voto é secreto, pessoal e só pode ser exercido uma vez.</p></div>
+          <div class="hero-badge">&#128274; Voto secreto</div>
+        </div>
+        <div class="section-title"><h2 id="tituloLista">Todas as eleições</h2></div>
+        <div id="lista" class="grid g2"></div>
+      </section>
+
+      <!-- BOLETIM DE VOTO -->
+      <section id="vistaVoto" class="hidden">
+        <button class="btn sec sm" onclick="voltar()">&larr; Voltar às eleições</button>
+        <div class="card" style="margin-top:16px">
+          <ul class="steps" aria-hidden="true"><li id="p1" class="on">Boletim de voto</li><li id="p2">Confirmação</li><li id="p3">Comprovativo</li></ul>
+
+          <div id="passo1">
+            <div class="ballot-head"><h2 id="bTitulo"></h2><div id="bDesc" class="muted"></div></div>
+            <div id="boletim"></div>
+            <div id="erroVoto" class="msg err hidden" role="alert"></div>
+            <button class="btn" id="btnContinuar" style="margin-top:14px" disabled>Continuar</button>
+          </div>
+
+          <div id="passo2" class="hidden">
+            <h2>Confirme o seu voto</h2>
+            <div id="resumo" class="notice" style="font-size:16px"></div>
+            <p class="notice">Depois de confirmar, o voto <strong>não pode ser alterado nem anulado</strong>.</p>
+            <div id="erroConf" class="msg err hidden" role="alert"></div>
+            <button class="btn sec" onclick="mostrarPasso(1)">Alterar escolha</button>
+            <button class="btn success" id="btnConfirmar">Confirmar voto</button>
+          </div>
+
+          <div id="passo3" class="hidden" style="text-align:center;padding:1rem 0">
+            <div style="font-size:3rem;color:var(--green)" aria-hidden="true">&#10004;</div>
+            <h2>Voto registado com sucesso</h2>
+            <p>Comprovativo de participação: <strong id="comprov"></strong><br>Referência: <code id="refer"></code></p>
+            <p class="muted small">O comprovativo apenas atesta que votou, nunca em quem votou.</p>
+            <button class="btn" onclick="voltar()">Voltar às eleições</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULTADOS -->
+      <section id="vistaRes" class="hidden">
+        <button class="btn sec sm" onclick="voltar()">&larr; Voltar às eleições</button>
+        <div class="card" style="margin-top:16px">
+          <h2 id="rTitulo"></h2>
+          <p id="rPart" class="muted"></p>
+          <div id="rLista"></div>
+        </div>
+      </section>
+      <div id="rodape"></div>
+    </main>
+  </div>
+  <script src="/js/common.js"></script>
+  <script src="/js/eleitor.js"></script>
+</body>
+</html>

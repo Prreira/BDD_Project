@@ -1,0 +1,56 @@
+@startuml
+title eVoto - Diagrama de atividades: Autenticar e votar
+|Eleitor|
+start
+:Indicar NIF;
+|Sistema|
+if (NIF válido, eleitor ativo\ne recenseado?) then (não)
+  :Registar falha em LogAutenticacao;
+  :Mostrar erro;
+  |Eleitor|
+  stop
+else (sim)
+  :Gerar código de 6 dígitos\n(CRYPT_GEN_RANDOM) e guardar hash;
+  :Mostrar código no ecrã\n(mensagem simulada) e preencher campo;
+endif
+|Eleitor|
+:Confirmar código;
+|Sistema|
+if (Código correto, não expirado\ne com tentativas?) then (não)
+  :Registar falha; anular após 3 erros;
+  |Eleitor|
+  stop
+else (sim)
+  :Marcar código como Usado;
+  :Iniciar sessão do eleitor;
+endif
+|Eleitor|
+:Consultar eleições e escolher uma Em Curso;
+|Sistema|
+if (Recenseado e ainda\nnão votou?) then (não)
+  :Mostrar mensagem de erro;
+  |Eleitor|
+  stop
+else (sim)
+  :Apresentar boletim\n(listas ou candidatos por cargo);
+endif
+|Eleitor|
+:Escolher opção (ou branco/nulo);
+:Rever e confirmar;
+|Sistema|
+:Iniciar transação;
+:Inserir RegistoVoto (NIF, eleição, origem Automatica);
+:Inserir Voto(s) (mesa, sem ligação ao NIF);
+if (Gatilhos e restrições OK?) then (não)
+  :ROLLBACK;
+  :Informar erro;
+  |Eleitor|
+  stop
+else (sim)
+  :COMMIT; atualizar num_votantes da mesa (G3);
+endif
+:Emitir comprovativo (hora + referência);
+|Eleitor|
+:Ver comprovativo;
+stop
+@enduml

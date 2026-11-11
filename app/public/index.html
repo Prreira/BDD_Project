@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eVoto - Entrar</title>
+  <link rel="icon" type="image/jpeg" href="/img/icon2.jpeg">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <a class="skip" href="#conteudo">Saltar para o conteúdo</a>
+  <div class="login">
+    <section class="login-left">
+      <div class="brand"><img class="logo" src="/img/icon2.jpeg" alt=""> eVoto</div>
+      <h1>Voto online seguro, simples e transparente.</h1>
+      <p>Plataforma de voto eletrónico para eleições por lista e uninominais. Identifique-se com o seu NIF, receba o código de acesso e vote em poucos passos.</p>
+      <div class="feature-list">
+        <div class="feature"><span class="check">&#10003;</span> Identificação com NIF e código de uso único</div>
+        <div class="feature"><span class="check">&#10003;</span> Voto secreto: participação e voto ficam em registos separados</div>
+        <div class="feature"><span class="check">&#10003;</span> Comprovativo de participação, sem revelar o sentido do voto</div>
+        <div class="feature"><span class="check">&#10003;</span> Apuramento auditável, com mandatos pelo método de Hondt</div>
+      </div>
+      <img class="login-art" src="/img/icon.jpeg" alt="Urna de voto protegida por um escudo">
+    </section>
+
+    <main id="conteudo" class="login-right">
+      <div class="login-box">
+        <h2 id="tituloEntrada">Entrar no eVoto</h2>
+        <p class="sub">Escolha como pretende aceder à plataforma.</p>
+        <div class="tabs" role="tablist">
+          <button role="tab" id="tabEleitor" class="active" aria-selected="true">Sou eleitor</button>
+          <button role="tab" id="tabAdmin" aria-selected="false">Administração</button>
+        </div>
+
+        <!-- ELEITOR: passo 1 (NIF) -->
+        <div id="painelEleitor">
+          <ul class="steps" aria-hidden="true"><li id="st1" class="on">Identificação</li><li id="st2">Código de acesso</li></ul>
+
+          <form id="formNif" novalidate>
+            <label for="nif" style="margin-top:0">Número de Identificação Fiscal (NIF)</label>
+            <input id="nif" class="nif-in" inputmode="numeric" maxlength="11" autocomplete="off" placeholder="000 000 000" required>
+            <div class="hint-t">9 dígitos. Demonstração: <a href="#" id="usarDemo">preencher NIF de teste</a></div>
+            <div id="erroNif" class="msg err hidden" role="alert"></div>
+            <button class="btn block" id="btnNif" type="submit" style="margin-top:18px">Pedir código de acesso</button>
+          </form>
+
+          <!-- passo 2 (código) -->
+          <form id="formCod" class="hidden" novalidate>
+            <button type="button" class="back" id="voltarNif">&larr; Alterar NIF</button>
+            <div class="notice" style="margin-top:0">Foi gerado um código para o NIF <strong id="nifMostra"></strong>.
+              Expira em <span class="timer" id="tempo">3:00</span>.</div>
+            <label for="cod">Código de acesso (6 dígitos)</label>
+            <input id="cod" class="otp-in" inputmode="numeric" maxlength="7" autocomplete="one-time-code" placeholder="000 000" required>
+            <div id="erroCod" class="msg err hidden" role="alert"></div>
+            <button class="btn block" id="btnCod" type="submit" style="margin-top:18px">Entrar</button>
+            <p class="small" style="margin-top:14px"><a href="#" id="novoCodigo">Pedir novo código</a></p>
+          </form>
+        </div>
+
+        <!-- ADMINISTRAÇÃO -->
+        <div id="painelAdmin" class="hidden">
+          <form id="formAdmin" novalidate>
+            <label for="email" style="margin-top:0">Email institucional</label>
+            <input id="email" type="email" autocomplete="username" required>
+            <label for="password">Palavra-passe</label>
+            <input id="password" type="password" autocomplete="current-password" required>
+            <div id="erroAdmin" class="msg err hidden" role="alert"></div>
+            <button class="btn block" id="btnAdmin" type="submit" style="margin-top:18px">Entrar</button>
+          </form>
+          <p class="hint-t" style="margin-top:16px">Demonstração: <code>admin1@evoto.pt</code> / <code>Admin#2026</code></p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- notificação com o código (substitui o envio por SMS/email) -->
+  <div id="sms" class="sms hidden" role="alert" aria-live="assertive">
+    <div class="top"><span style="display:flex;align-items:center;gap:8px"><img src="/img/icon2.jpeg" alt=""> Nova mensagem &middot; eVoto</span>
+      <button class="x" id="fechaSms" aria-label="Fechar mensagem">&times;</button></div>
+    <div class="body"><span id="smsTexto"></span><span class="cod" id="smsCod"></span>
+      <span class="small">Válido por 3 minutos e de uso único. Não o partilhe com ninguém.</span><br>
+      <span class="small muted">Mensagem simulada: o código é gerado pelo sistema e mostrado aqui, sem serviços externos (SMS/email).</span></div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/login.js"></script>
+</body>
+</html>

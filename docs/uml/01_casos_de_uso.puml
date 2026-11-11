@@ -1,0 +1,64 @@
+@startuml
+title eVoto - Diagrama de casos de uso
+left to right direction
+skinparam packageStyle rectangle
+
+actor Eleitor
+actor Administrador
+actor "Sistema\n(temporizador)" as Sistema
+
+rectangle eVoto {
+  usecase "UC01 Autenticar eleitor\n(NIF + código)" as UC01
+  usecase "Gerar código de acesso" as UC01a
+  usecase "Validar código de acesso" as UC01b
+  usecase "UC02 Autenticar administrador\n(email + palavra-passe)" as UC02
+  usecase "UC03 Terminar sessão" as UC03
+
+  usecase "UC04 Consultar as minhas eleições" as UC04
+  usecase "UC05 Votar" as UC05
+  usecase "Confirmar voto" as UC05a
+  usecase "UC06 Consultar resultados\n(eleições apuradas)" as UC06
+
+  usecase "UC07 Gerir eleições" as UC07
+  usecase "UC08 Gerir cargos, listas\ne candidatos" as UC08
+  usecase "UC09 Gerir mesas de voto" as UC09
+  usecase "UC10 Gerir recenseamento" as UC10
+  usecase "UC11 Alterar estado / apurar\n(Hondt)" as UC11
+  usecase "UC12 Gerir eleitores" as UC12
+  usecase "UC13 Consultar painel (dashboards)" as UC13
+  usecase "UC14 Consultar auditoria\ne autenticações" as UC14
+  usecase "Abrir/encerrar eleições\npor calendário" as UC15
+}
+
+Eleitor --> UC01
+Eleitor --> UC04
+Eleitor --> UC05
+Eleitor --> UC06
+Eleitor --> UC03
+
+Administrador --> UC02
+Administrador --> UC07
+Administrador --> UC11
+Administrador --> UC12
+Administrador --> UC13
+Administrador --> UC14
+Administrador --> UC03
+
+Sistema --> UC15
+
+UC01 ..> UC01a : <<include>>
+UC01 ..> UC01b : <<include>>
+UC04 ..> UC01 : <<include>>
+UC05 ..> UC01 : <<include>>
+UC06 ..> UC01 : <<include>>
+UC05 ..> UC05a : <<include>>
+UC07 ..> UC02 : <<include>>
+UC11 ..> UC02 : <<include>>
+UC12 ..> UC02 : <<include>>
+UC13 ..> UC02 : <<include>>
+UC14 ..> UC02 : <<include>>
+UC08 ..> UC07 : <<extend>>
+UC09 ..> UC07 : <<extend>>
+UC10 ..> UC07 : <<extend>>
+UC15 ..> UC11 : <<include>>
+@enduml

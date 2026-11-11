@@ -1,0 +1,42 @@
+@startuml
+title eVoto - Diagrama de atividades: Preparar e apurar uma eleição
+|Administrador|
+start
+:Criar eleição (estado Agendada);
+:Definir cargos e mandatos;
+:Criar listas (se escrutínio por Lista);
+:Registar candidatos;
+:Criar mesas de voto e membros;
+:Recensear eleitores (distribuídos pelas mesas);
+:Iniciar votação (ou aguardar data_inicio);
+|Sistema|
+if (≥1 cargo, mesa e recenseado;\n≥2 listas/candidatos?) then (não)
+  :Rejeitar (gatilho G9);
+  |Administrador|
+  :Corrigir dados;
+  detach
+else (sim)
+  :Estado = Em Curso;
+endif
+:Receber votos;
+:Aguardar data_fim;
+:Estado = Encerrada;
+|Administrador|
+:Pedir apuramento;
+|Sistema|
+if (RegistoVoto = contadores das mesas\ne nº de votos esperado?) then (não)
+  :Rejeitar apuramento (integridade);
+  stop
+else (sim)
+  if (Escrutínio por Lista?) then (sim)
+    :Distribuir mandatos pelo método de Hondt;
+  else (não)
+    :Vencedor = candidato mais votado por cargo;
+  endif
+  :Gravar ResultadoApuramento;
+  :Estado = Apurada;
+endif
+|Administrador|
+:Consultar resultados no painel;
+stop
+@enduml

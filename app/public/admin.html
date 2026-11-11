@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eVoto - Administração</title>
+  <link rel="icon" type="image/jpeg" href="/img/icon2.jpeg">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="cabecalho"></div>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Menu da administração">
+      <h5>Gestão</h5>
+      <nav class="nav" id="nav"></nav>
+    </aside>
+
+    <main id="conteudo" class="content">
+      <!-- PAINEL -->
+      <section id="dash">
+        <div class="hero">
+          <div><h1>Painel de acompanhamento</h1>
+            <p>Indicadores e resultados em tempo real. Os dados atualizam automaticamente a cada 15 segundos.</p></div>
+          <div class="hero-badge">&#9679; Em tempo real</div>
+        </div>
+        <div class="grid g4 cards" id="kpis"></div>
+        <div class="card" style="margin-top:18px">
+          <div class="row" style="align-items:center">
+            <h2 style="margin:0">Resultados da eleição</h2>
+            <select id="selResultados" aria-label="Escolher eleição"></select>
+          </div>
+          <div class="grid g2" style="margin-top:16px">
+            <div><h3>Votos por opção</h3><div class="chart-box"><canvas id="chResultados" role="img" aria-label="Gráfico de votos por opção"></canvas></div></div>
+            <div><h3>Participação</h3><div class="chart-box"><canvas id="chParticipacao" role="img" aria-label="Gráfico de participação"></canvas></div></div>
+          </div>
+          <h3 style="margin-top:20px">Participação por mesa de voto (%)</h3>
+          <div class="chart-box"><canvas id="chMesas" role="img" aria-label="Participação por mesa"></canvas></div>
+          <p class="muted small" id="resInfo"></p>
+        </div>
+        <div class="grid g2">
+          <div class="card"><h3>Participação por eleição</h3><div class="chart-box"><canvas id="chGeral" role="img" aria-label="Participação por eleição"></canvas></div></div>
+          <div class="card"><h3>Atividade recente</h3><div class="table-wrap"><table id="tAtividade"></table></div></div>
+        </div>
+      </section>
+
+      <!-- ELEIÇÕES -->
+      <section id="eleicoes" class="hidden">
+        <div class="section-title" style="margin-top:0"><div><h1 style="margin:0">Eleições</h1><span class="muted">Preparação, acompanhamento e apuramento.</span></div>
+          <button class="btn" onclick="novaEleicao()">+ Nova eleição</button></div>
+        <div class="table-wrap"><table id="tEleicoes"></table></div>
+      </section>
+
+      <!-- ELEITORES -->
+      <section id="eleitores" class="hidden">
+        <div class="section-title" style="margin-top:0"><div><h1 style="margin:0">Eleitores</h1><span class="muted">Cadastro de eleitores identificados pelo NIF.</span></div>
+          <button class="btn" onclick="novoEleitor()">+ Novo eleitor</button></div>
+        <div class="card"><label for="pesq" style="margin-top:0">Pesquisar</label>
+          <input id="pesq" placeholder="Nome ou NIF"></div>
+        <div class="table-wrap"><table id="tEleitores"></table></div>
+      </section>
+
+      <!-- AUTENTICAÇÕES -->
+      <section id="autenticacoes" class="hidden">
+        <div class="section-title" style="margin-top:0"><div><h1 style="margin:0">Autenticações</h1><span class="muted">Pedidos de código, validações e entradas na administração (últimos 200 registos).</span></div></div>
+        <div class="table-wrap"><table id="tAutenticacoes"></table></div>
+      </section>
+
+      <!-- AUDITORIA -->
+      <section id="auditoria" class="hidden">
+        <div class="section-title" style="margin-top:0"><div><h1 style="margin:0">Registo de auditoria</h1><span class="muted">Ações relevantes. O sentido do voto nunca é registado.</span></div></div>
+        <div class="table-wrap"><table id="tAuditoria"></table></div>
+      </section>
+      <div id="rodape"></div>
+    </main>
+  </div>
+
+  <div id="modalBg" class="modal-bg hidden"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

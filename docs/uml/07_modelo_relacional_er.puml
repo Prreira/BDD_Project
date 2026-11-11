@@ -1,0 +1,120 @@
+@startuml
+title eVoto - Modelo relacional (diagrama ER físico, SQL Server)
+hide circles
+skinparam linetype ortho
+
+entity "Administrador" as AD {
+  * id_admin : INT <<PK>>
+  --
+  email : NVARCHAR(120) <<UQ>>
+  nome, password_hash, nivel_acesso, ativo
+}
+entity "Eleicao" as EL {
+  * nome : NVARCHAR(200) <<PK>>
+  --
+  descricao, data_inicio, data_fim
+  tipo_escrutinio, estado
+  id_admin_criador : INT <<FK>>
+}
+entity "Cargo" as CG {
+  * eleicao : <<PK,FK>>
+  * cargo : <<PK>>
+  --
+  num_mandatos
+}
+entity "Lista" as LI {
+  * eleicao : <<PK,FK>>
+  * sigla : <<PK>>
+  --
+  designacao
+}
+entity "Eleitor" as E {
+  * nif : NVARCHAR(9) <<PK>>
+  --
+  nome, data_nascimento, ativo
+  CHECK fn_NifValido(nif)
+}
+entity "MesaDeVoto" as M {
+  * eleicao : <<PK,FK>>
+  * num_mesa : <<PK>>
+  --
+  localizacao, num_votantes
+}
+entity "Recenseamento" as R {
+  * eleicao : <<PK,FK>>
+  * nif : <<PK,FK>>
+  --
+  num_mesa : <<FK>>
+}
+entity "Candidato" as C {
+  * eleicao : <<PK,FK>>
+  * nif : <<PK,FK>>
+  --
+  cargo : <<FK>>
+  sigla_lista : <<FK, nulo>>
+  posicao
+}
+entity "MembroMesa" as MM {
+  * eleicao, num_mesa, nif : <<PK,FK>>
+  --
+  funcao
+}
+entity "RegistoVoto" as RV {
+  * eleicao, nif : <<PK,FK>>
+  --
+  data_hora, origem
+}
+entity "Voto" as V {
+  * id_voto : UNIQUEIDENTIFIER <<PK>>
+  --
+  eleicao, num_mesa : <<FK>>
+  tipo_voto
+  cargo, sigla_lista, nif_candidato : <<FK, nulos>>
+}
+entity "ResultadoApuramento" as RA {
+  * id_resultado : INT <<PK>>
+  --
+  eleicao, cargo, sigla_lista, nif_candidato
+  num_votos, num_mandatos
+}
+entity "CodigoAcesso" as CA {
+  * id_codigo : INT <<PK>>
+  --
+  nif : <<FK>>
+  salt, hash_codigo
+  criado_em, expira_em, estado, tentativas
+}
+entity "LogAutenticacao" as LA {
+  * id_log : INT <<PK>>
+  --
+  nif_tentativa, data_hora, sucesso
+  motivo_falha, etapa
+  eleicao, num_mesa : <<FK, nulos>>
+}
+entity "Auditoria" as AU {
+  * id_log : BIGINT <<PK>>
+  --
+  data_hora, autor, acao, entidade, detalhe
+}
+
+AD ||--o{ EL
+EL ||--|{ CG
+EL ||--o{ LI
+EL ||--|{ M
+EL ||--o{ R
+E  ||--o{ R
+M  ||--o{ R
+EL ||--o{ C
+E  ||--o{ C
+CG ||--o{ C
+LI |o--o{ C
+M  ||--o{ MM
+E  ||--o{ MM
+R  ||--o| RV
+M  ||--o{ V
+LI |o--o{ V
+C  |o--o{ V
+EL ||--o{ RA
+E  ||--o{ CA
+M  |o--o{ LA
+@enduml

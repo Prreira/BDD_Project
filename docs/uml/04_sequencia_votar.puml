@@ -1,0 +1,45 @@
+@startuml
+title eVoto - Diagrama de sequência: Autenticação (NIF + código) e votação
+actor Eleitor
+participant "Browser" as B
+participant "Servidor\n(Express)" as S
+database "SQL Server\n(eVoto)" as DB
+
+== Autenticação ==
+Eleitor -> B : indica o NIF
+B -> S : POST /api/auth/codigo {nif}
+S -> DB : EXEC sp_GerarCodigoAcesso(nif)
+DB -> DB : fn_NifValido; eleitor ativo e recenseado;\nlimite de pedidos; anula códigos anteriores
+DB -> DB : código = CRYPT_GEN_RANDOM; guarda salt + hash
+DB --> S : código, expira_em
+S --> B : {código, validade}
+B --> Eleitor : notificação com o código\n(preenchido automaticamente)
+Eleitor -> B : confirma o código
+B -> S : POST /api/auth/verificar {nif, código}
+S -> DB : EXEC sp_ValidarCodigoAcesso
+alt código correto
+  DB --> S : nome do eleitor (código passa a Usado)
+  S --> B : 200 + sessão
+else código errado / expirado / usado
+  DB --> S : erro + LogAutenticacao
+  S --> B : 409 {erro}
+end
+
+== Votação ==
+Eleitor -> B : escolhe e confirma
+B -> S : POST /api/eleitor/votar {eleição, escolhas}
+S -> S : valida sessão (perfil ELEITOR); traduz escolhas
+S -> DB : EXEC sp_RegistarVoto(nif da sessão, eleição, JSON)
+DB -> DB : verifica recenseamento e voto prévio
+DB -> DB : BEGIN TRANSACTION
+DB -> DB : INSERT RegistoVoto (G1, G3, G4)
+DB -> DB : INSERT Voto (G5; sem ligação ao NIF)
+DB -> DB : COMMIT
+DB --> S : data_hora, referência
+S --> B : 200
+B --> Eleitor : comprovativo
+note right of DB
+  RegistoVoto e Voto são independentes:
+  nenhuma coluna permite cruzá-los.
+end note
+@enduml
