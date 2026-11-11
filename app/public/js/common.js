@@ -42,7 +42,7 @@ function cabecalho({ perfil, nome } = {}) {
   el.innerHTML = `
     <a class="skip" href="#conteudo">Saltar para o conteúdo</a>
     <header class="topbar">
-      <a class="brand" href="/" aria-label="eVoto - página inicial"><img class="logo" src="/img/icon2.jpeg" alt=""> eVoto</a>
+      <a class="brand" href="/" aria-label="eVoto - página inicial"><img class="logo" src="/img/logo-192.png" alt=""> eVoto</a>
       ${nome ? `<div class="top-actions">
         <span class="role-pill">${perfil === 'ADMIN' ? 'Administração' : 'Eleitor'}</span>
         <span class="who-name">${esc(nome)}</span><span class="avatar" aria-hidden="true">${inicial}</span>
