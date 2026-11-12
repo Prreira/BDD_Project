@@ -191,17 +191,35 @@ BEGIN
         THROW 50010, N'Transição de estado da eleição inválida.', 1;
     END;
 
-    -- para iniciar são precisos: 1 cargo, 1 recenseado e pelo menos 2 opções de voto
+    -- para iniciar são precisos: 1 cargo, 1 recenseado, pelo menos 2 opções de voto
+    -- e nenhuma opção "vazia" (lista sem candidatos; cargo uninominal sem candidatos)
     IF UPDATE(estado) AND EXISTS (
             SELECT 1 FROM inserted i JOIN deleted d ON d.nome = i.nome
             WHERE d.estado = 'Agendada' AND i.estado = 'Em Curso'
               AND ( NOT EXISTS (SELECT 1 FROM dbo.Cargo c WHERE c.eleicao = i.nome)
                  OR NOT EXISTS (SELECT 1 FROM dbo.Recenseamento r WHERE r.eleicao = i.nome)
                  OR (i.tipo_escrutinio = 'Lista'      AND (SELECT COUNT(*) FROM dbo.Lista l WHERE l.eleicao = i.nome) < 2)
-                 OR (i.tipo_escrutinio = 'Uninominal' AND (SELECT COUNT(*) FROM dbo.Candidato k WHERE k.eleicao = i.nome) < 2) ))
+                 OR (i.tipo_escrutinio = 'Uninominal' AND (SELECT COUNT(*) FROM dbo.Candidato k WHERE k.eleicao = i.nome) < 2)
+                 OR (i.tipo_escrutinio = 'Lista' AND EXISTS (
+                        SELECT 1 FROM dbo.Lista l WHERE l.eleicao = i.nome
+                          AND NOT EXISTS (SELECT 1 FROM dbo.Candidato k WHERE k.eleicao = l.eleicao AND k.sigla_lista = l.sigla)))
+                 OR (i.tipo_escrutinio = 'Uninominal' AND EXISTS (
+                        SELECT 1 FROM dbo.Cargo c WHERE c.eleicao = i.nome
+                          AND NOT EXISTS (SELECT 1 FROM dbo.Candidato k WHERE k.eleicao = c.eleicao AND k.cargo = c.cargo))) ))
     BEGIN
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW 50011, N'Para iniciar a eleição são precisos cargo, eleitores recenseados e pelo menos 2 listas/candidatos.', 1;
+        THROW 50011, N'Para iniciar a eleição são precisos cargo, eleitores recenseados, pelo menos 2 listas/candidatos e candidatos em todas as listas (ou cargos, nas uninominais).', 1;
+    END;
+
+    -- o tipo de escrutínio não pode mudar se a eleição já tem listas ou candidatos
+    IF UPDATE(tipo_escrutinio) AND EXISTS (
+            SELECT 1 FROM inserted i JOIN deleted d ON d.nome = i.nome
+            WHERE i.tipo_escrutinio <> d.tipo_escrutinio
+              AND (EXISTS (SELECT 1 FROM dbo.Lista l WHERE l.eleicao = i.nome)
+                OR EXISTS (SELECT 1 FROM dbo.Candidato k WHERE k.eleicao = i.nome)))
+    BEGIN
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW 50014, N'Não é possível mudar o tipo de escrutínio de uma eleição que já tem listas ou candidatos.', 1;
     END;
 
     -- dados estruturais congelados depois de a eleição arrancar

@@ -89,12 +89,13 @@ router.post('/votar', wrap(async (req, res) => {
     const tipo = String(c.tipo || '');
     if (!['Valido', 'Branco', 'Nulo'].includes(tipo)) return res.status(400).json({ erro: 'Pedido inválido.' });
     if (lista) {
-      if (tipo === 'Valido' && !c.sigla) return res.status(400).json({ erro: 'Escolha uma lista.' });
-      json.push({ tipo, sigla: tipo === 'Valido' ? String(c.sigla) : null });
+      if (tipo === 'Valido' && (typeof c.sigla !== 'string' || !c.sigla || c.sigla.length > 15)) return res.status(400).json({ erro: 'Escolha uma lista.' });
+      json.push({ tipo, sigla: tipo === 'Valido' ? c.sigla : null });
     } else {
+      if (typeof c.cargo !== 'string' || !c.cargo || c.cargo.length > 100) return res.status(400).json({ erro: 'Pedido inválido.' });
       const cand = (por[c.cargo] || [])[Number(c.indice)];
       if (tipo === 'Valido' && !cand) return res.status(400).json({ erro: 'Escolha um candidato.' });
-      json.push({ cargo: String(c.cargo), tipo, nif: tipo === 'Valido' ? cand.nif : null });
+      json.push({ cargo: c.cargo, tipo, nif: tipo === 'Valido' ? cand.nif : null });
     }
   }
   const r = await pool.request()

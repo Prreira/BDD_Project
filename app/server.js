@@ -36,6 +36,8 @@ app.use(session({
 app.get('/eleitor.html', requirePage('ELEITOR'));
 app.get('/admin.html', requirePage('ADMIN'));
 app.use(express.static(path.join(__dirname, 'public')));
+// Chart.js servido localmente (a apresentação não pode depender de uma CDN nem de Internet)
+app.use('/vendor/chart.js', express.static(path.join(__dirname, 'node_modules', 'chart.js', 'dist')));
 
 // ---- limitação de pedidos por IP (memória) ---------------------------------
 const pedidos = new Map();
@@ -50,10 +52,12 @@ function limitar(max, janelaMs) {
 setInterval(() => pedidos.clear(), 60 * 60 * 1000).unref();
 
 const limparNif = (v) => String(v || '').replace(/\s+/g, '');
+const nifFormatoOk = (v) => /^\d{9}$/.test(v);
 
 // ---- autenticação do eleitor: 1) NIF -> código; 2) código -> sessão --------
 app.post('/api/auth/codigo', limitar(15, 10 * 60 * 1000), wrap(async (req, res) => {
   const nif = limparNif(req.body.nif);
+  if (!nifFormatoOk(nif)) return res.status(400).json({ erro: 'O NIF tem 9 dígitos.' });
   const pool = await getPool();
   const r = await pool.request().input('nif', sql.NVarChar(9), nif).execute('dbo.sp_GerarCodigoAcesso');
   const c = r.recordset[0];
@@ -67,6 +71,7 @@ app.post('/api/auth/codigo', limitar(15, 10 * 60 * 1000), wrap(async (req, res) 
 
 app.post('/api/auth/verificar', limitar(30, 10 * 60 * 1000), wrap(async (req, res) => {
   const nif = limparNif(req.body.nif), codigo = String(req.body.codigo || '').replace(/\s+/g, '');
+  if (!nifFormatoOk(nif)) return res.status(400).json({ erro: 'O NIF tem 9 dígitos.' });
   if (!/^\d{6}$/.test(codigo)) return res.status(400).json({ erro: 'O código tem 6 dígitos.' });
   const pool = await getPool();
   const r = await pool.request().input('nif', sql.NVarChar(9), nif).input('codigo', sql.NVarChar(6), codigo)
@@ -90,7 +95,7 @@ app.get('/api/auth/demo', wrap(async (req, res) => {
       AND NOT EXISTS (SELECT 1 FROM dbo.RegistoVoto rv JOIN dbo.Eleicao e2 ON e2.nome = rv.eleicao AND e2.estado = 'Em Curso'
                       WHERE rv.nif = el.nif)
       AND NOT EXISTS (SELECT 1 FROM dbo.Candidato c WHERE c.nif = el.nif)
-    ORDER BY el.nome`);
+    ORDER BY NEWID()`);   // aleatório: não esgota o limite de pedidos de código de um único NIF
   if (!r.recordset.length) return res.status(404).json({ erro: 'Sem eleitores de teste disponíveis.' });
   res.json({ nif: r.recordset[0].nif });
 }));

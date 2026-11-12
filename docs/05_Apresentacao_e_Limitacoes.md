@@ -31,4 +31,6 @@ Perguntas prováveis: *como garantem o anonimato?* (tabelas separadas, sem hora,
 | Sem voto presencial | O projeto é só online: as mesas de voto e a origem `Manual` do `Dados2.sql` original foram removidas (ver `03_Modelo_de_Dados.md` §3.1). |
 | Sem testes automáticos da aplicação | Existem testes SQL (`06`) e testes manuais registados no README (§Testes). |
 | Autenticação do administrador sem 2.º fator | Futuro: 2FA. |
+| A aplicação liga-se ao SQL Server com a conta `sa` | Aceitável em ambiente local de demonstração. Em produção usar um *login* dedicado só com permissões de leitura/escrita nas tabelas e `EXECUTE` nos procedimentos. |
+| Mensagens do login revelam se um NIF existe | É a mensagem útil ao utilizador; mitigado por limite de pedidos (15 por IP e 5 códigos por NIF em 10 min). Em produção usar uma mensagem genérica. O endpoint `/api/auth/demo` só existe em modo de demonstração. |
 | Hondt com desempate simples | Empate de quocientes resolvido por votos e sigla; uninominais empatadas ficam sem vencedor (2.ª volta não implementada). |

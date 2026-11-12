@@ -73,6 +73,16 @@ npm run sql -- ..\db\05_consultas.sql
 
 Os NIF dos eleitores são válidos (dígito de controlo). O modo em que o código é mostrado no ecrã é só para demonstração (`OTP_MODO=ecra`, por omissão).
 
+## Resolução de problemas
+
+| Erro | Causa e solução |
+|---|---|
+| `.\iniciar.ps1 cannot be loaded because running scripts is disabled` | A política de execução do PowerShell bloqueia scripts. Correr uma vez `powershell -ExecutionPolicy Bypass -File .\iniciar.ps1` ou, em definitivo, `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`. |
+| `Failed to connect to localhost:1433` | O SQL Server é uma instância **com nome** (`SQLEXPRESS`): definir `$env:DB_INSTANCE = "SQLEXPRESS"` (ou guardá-la como variável de ambiente do utilizador e abrir um terminal novo). |
+| `Login failed for user 'sa'` | A password não está em `DB_PASSWORD` no terminal atual (abrir um terminal novo depois de a guardar). |
+| Gráficos do painel em branco | Correr `npm install` na pasta `app` (o Chart.js é servido localmente a partir de `node_modules`, sem Internet). |
+| `npm run sql` ou `npm run setup` sem ligação | Confirmar que o serviço `MSSQL$SQLEXPRESS` e o `SQL Server Browser` estão a correr. |
+
 ## Segurança implementada
 
 NIF validado; código de uso único com *hash* SHA-256 salgado, validade de 3 min, 3 tentativas e limite de pedidos; bcrypt para administradores; sessões `HttpOnly` + `SameSite=Strict`; perfil verificado no servidor (HTTP 403); queries parametrizadas; escape de HTML no cliente; **anonimato do voto** por desenho da BD (ver `03_Modelo_de_Dados.md`). Limitações em `05_Apresentacao_e_Limitacoes.md`.

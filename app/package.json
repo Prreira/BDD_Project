@@ -2,6 +2,7 @@
   "name": "evoto",
   "version": "1.0.0",
   "description": "eVoto - Sistema de Voto Online (Node.js + SQL Server)",
+  "private": true,
   "main": "server.js",
   "scripts": {
     "setup": "node setup.js",
@@ -12,6 +13,7 @@
   "engines": { "node": ">=18" },
   "dependencies": {
     "bcryptjs": "2.4.3",
+    "chart.js": "4.4.1",
     "express": "4.19.2",
     "express-session": "1.18.0",
     "mssql": "10.0.2"

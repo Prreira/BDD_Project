@@ -82,8 +82,8 @@ GO
    AUTENTICAÇÃO DO ELEITOR: NIF + código de uso único
    O código é gerado pela própria base de dados (CRYPT_GEN_RANDOM) e
    devolvido à aplicação para ser apresentado no ecrã, sem serviços externos
-   (SMS/email). Num sistema real, @devolver_codigo = 0 e um serviço de
-   mensagens entregaria o código.
+   (SMS/email). Num sistema real, a aplicação não mostraria o código e um
+   serviço de mensagens entregaria-o ao eleitor (ver OTP_MODO em server.js).
    --------------------------------------------------------------------- */
 CREATE OR ALTER PROCEDURE dbo.sp_GerarCodigoAcesso
     @nif NVARCHAR(9),
@@ -148,7 +148,7 @@ BEGIN
     SET NOCOUNT ON;
     DECLARE @id INT, @salt BINARY(16), @hash BINARY(32), @expira DATETIME, @tent TINYINT;
 
-    SELECT TOP (1) @id = id_codigo, @salt = salt, @hash = hash_codigo, @expira = expira_em, @tent = tentativas
+    SELECT TOP (1) @id = id_codigo, @salt = salt, @hash = hash_codigo, @expira = expira_em
     FROM dbo.CodigoAcesso WHERE nif = @nif AND estado = 'Pendente'
     ORDER BY id_codigo DESC;
 
@@ -161,18 +161,26 @@ BEGIN
 
     IF GETDATE() > @expira
     BEGIN
-        UPDATE dbo.CodigoAcesso SET estado = 'Expirado' WHERE id_codigo = @id;
+        UPDATE dbo.CodigoAcesso SET estado = 'Expirado' WHERE id_codigo = @id AND estado = 'Pendente';
         INSERT dbo.LogAutenticacao (nif_tentativa, sucesso, motivo_falha, etapa)
         VALUES (@nif, 0, N'Código expirado', 'Validacao');
         THROW 50045, N'O código expirou. Peça um novo código.', 1;
     END;
 
+    -- Cada tentativa é contada de forma ATÓMICA antes de comparar o código: mesmo
+    -- com pedidos em paralelo, só as 3 primeiras tentativas chegam a ser avaliadas.
+    UPDATE dbo.CodigoAcesso SET @tent = tentativas = tentativas + 1
+    WHERE id_codigo = @id AND estado = 'Pendente' AND tentativas < 3;
+    IF @@ROWCOUNT = 0
+    BEGIN
+        INSERT dbo.LogAutenticacao (nif_tentativa, sucesso, motivo_falha, etapa)
+        VALUES (@nif, 0, N'Código anulado ou já usado', 'Validacao');
+        THROW 50044, N'Não existe nenhum código ativo. Peça um novo código.', 1;
+    END;
+
     IF @hash <> HASHBYTES('SHA2_256', @salt + CAST(CONCAT(@nif, N':', @codigo) AS VARBINARY(100)))
     BEGIN
-        SET @tent += 1;
-        UPDATE dbo.CodigoAcesso SET tentativas = @tent,
-               estado = CASE WHEN @tent >= 3 THEN 'Anulado' ELSE estado END
-        WHERE id_codigo = @id;
+        IF @tent >= 3 UPDATE dbo.CodigoAcesso SET estado = 'Anulado' WHERE id_codigo = @id;
         INSERT dbo.LogAutenticacao (nif_tentativa, sucesso, motivo_falha, etapa)
         VALUES (@nif, 0, CONCAT(N'Código incorreto (tentativa ', @tent, N')'), 'Validacao');
         IF @tent >= 3 THROW 50046, N'Código incorreto. O código foi anulado; peça um novo código.', 1;
@@ -180,7 +188,10 @@ BEGIN
         THROW 50047, @msg, 1;
     END;
 
-    UPDATE dbo.CodigoAcesso SET estado = 'Usado' WHERE id_codigo = @id;
+    -- uso único: só um pedido consegue passar de Pendente a Usado
+    UPDATE dbo.CodigoAcesso SET estado = 'Usado' WHERE id_codigo = @id AND estado = 'Pendente';
+    IF @@ROWCOUNT = 0
+        THROW 50044, N'Não existe nenhum código ativo. Peça um novo código.', 1;
     INSERT dbo.LogAutenticacao (nif_tentativa, sucesso, etapa) VALUES (@nif, 1, 'Validacao');
 
     SELECT nif, nome FROM dbo.Eleitor WHERE nif = @nif;

@@ -61,12 +61,13 @@ Prioridade MoSCoW: **M** (tem de existir), **S** (deve existir), **C** (pode exi
 | ID | Regra |
 |---|---|
 | RN01 | Ciclo de vida: `Agendada → Em Curso → Encerrada → Apurada` (sem retrocessos). |
-| RN02 | Para iniciar uma eleição são necessários: 1 cargo, eleitores recenseados e pelo menos 2 listas (Lista) ou 2 candidatos (Uninominal). |
+| RN02 | Para iniciar uma eleição são necessários: 1 cargo, eleitores recenseados e pelo menos 2 listas (Lista) ou 2 candidatos (Uninominal) (ver RN08). |
 | RN03 | Um eleitor tem NIF válido (dígito de controlo) e pelo menos 18 anos. |
 | RN04 | Depois de a eleição iniciar, cargos, listas, candidatos e recenseamento não podem ser alterados. |
 | RN05 | Registos de voto e votos nunca podem ser alterados ou apagados. |
 | RN06 | Numa eleição por Lista, o voto válido indica uma lista e o candidato pertence a uma lista; numa uninominal o voto válido indica um candidato de um cargo e o candidato não tem lista. |
-| RN07 | O código de acesso é de uso único, expira em 3 minutos e só o mais recente é válido. |
+| RN07 | O código de acesso é de uso único, expira em 3 minutos e só o mais recente é válido. As tentativas são contadas de forma atómica (no máximo 3, mesmo com pedidos em paralelo). |
+| RN08 | Uma eleição só inicia se todas as listas tiverem candidatos (Lista) ou todos os cargos tiverem candidatos (Uninominal), e o tipo de escrutínio não pode mudar depois de existirem listas ou candidatos. |
 
 ## 1.4 Requisitos não funcionais
 

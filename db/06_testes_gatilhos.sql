@@ -101,6 +101,27 @@ BEGIN TRY
 END TRY
 BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
 
+PRINT N'--- G8: mudar o tipo de escrutínio de uma eleição que já tem listas (deve falhar) ---';
+BEGIN TRY
+    BEGIN TRAN; UPDATE dbo.Eleicao SET tipo_escrutinio = 'Uninominal' WHERE nome = @fre; ROLLBACK;
+    PRINT N'FALHOU: tipo alterado.';
+END TRY
+BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
+
+PRINT N'--- G8: iniciar eleição com uma lista sem candidatos (deve falhar) ---';
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT dbo.Eleicao (nome, data_inicio, data_fim, tipo_escrutinio) VALUES (N'Teste lista vazia', GETDATE(), DATEADD(DAY, 1, GETDATE()), 'Lista');
+    INSERT dbo.Cargo (eleicao, cargo) VALUES (N'Teste lista vazia', N'Cargo');
+    INSERT dbo.Lista (eleicao, sigla, designacao) VALUES (N'Teste lista vazia', N'A', N'Lista A'), (N'Teste lista vazia', N'B', N'Lista B');
+    INSERT dbo.Candidato (eleicao, nif, cargo, sigla_lista, posicao) VALUES (N'Teste lista vazia', @livre, N'Cargo', N'A', 1);   -- a lista B fica sem candidatos
+    INSERT dbo.Recenseamento (eleicao, nif) VALUES (N'Teste lista vazia', @livre);
+    UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = N'Teste lista vazia';
+    ROLLBACK;
+    PRINT N'FALHOU: eleição com lista vazia iniciada.';
+END TRY
+BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK; PRINT N'OK  bloqueado: ' + ERROR_MESSAGE(); END CATCH;
+
 PRINT N'--- G10: eleitor menor de idade (deve falhar) ---';
 BEGIN TRY
     BEGIN TRAN; INSERT dbo.Eleitor (nif, nome, data_nascimento) VALUES (dbo.fn_NifCompletar('29999998'), N'Menor', DATEADD(YEAR, -16, GETDATE())); ROLLBACK;

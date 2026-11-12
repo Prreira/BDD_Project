@@ -1,7 +1,9 @@
 // API da administração: dashboards e manutenção
 const router = require('express').Router();
 const { sql, getPool, runAs } = require('../db');
-const { wrap } = require('../util');
+const { wrap, nifValido, limitarNome } = require('../util');
+
+router.param('nome', limitarNome);   // :nome (eleição) tem no máximo 200 caracteres
 
 const TIPOS = ['Lista', 'Uninominal'];
 const ESTADOS_DESTINO = ['Em Curso', 'Encerrada', 'Apurada'];
@@ -213,6 +215,7 @@ router.post('/eleitores', wrap(async (req, res) => {
   const nome = texto(req.body.nome, 150), nasc = dataLocal(req.body.dataNascimento);
   if (!nome || !nasc) return bad(res, 'Indique o nome e a data de nascimento.');
   if (!nifOk(req.body.nif)) return bad(res, 'O NIF tem 9 dígitos.');
+  if (!nifValido(req.body.nif)) return bad(res, 'O NIF não é válido (dígito de controlo incorreto).');
   await runAs(autor(req), async (rq) => {
     await rq().input('n', sql.NVarChar(9), req.body.nif).input('nm', sql.NVarChar(150), nome).input('d', sql.Date, nasc)
       .query('INSERT dbo.Eleitor (nif, nome, data_nascimento) VALUES (@n, @nm, @d)');
@@ -225,9 +228,11 @@ router.post('/eleitores', wrap(async (req, res) => {
 router.put('/eleitores/:nif', wrap(async (req, res) => {
   const nome = texto(req.body.nome, 150), ativo = req.body.ativo ? 1 : 0;
   if (!nome) return bad(res, 'Indique o nome.');
+  if (!nifOk(req.params.nif)) return bad(res, 'NIF inválido.');
   await runAs(autor(req), async (rq) => {
-    await rq().input('n', sql.NVarChar(9), req.params.nif).input('nm', sql.NVarChar(150), nome).input('a', sql.Bit, ativo)
+    const u = await rq().input('n', sql.NVarChar(9), req.params.nif).input('nm', sql.NVarChar(150), nome).input('a', sql.Bit, ativo)
       .query('UPDATE dbo.Eleitor SET nome = @nm, ativo = @a WHERE nif = @n');
+    if (!u.rowsAffected[0]) lancar(50902, 'Eleitor não encontrado.');
     await rq().input('n', sql.NVarChar(9), req.params.nif).input('d', sql.NVarChar(400), ativo ? 'Eleitor ativo/atualizado' : 'Eleitor desativado')
       .query("INSERT dbo.Auditoria (autor, acao, entidade, detalhe) VALUES (TRY_CAST(SESSION_CONTEXT(N'autor') AS NVARCHAR(40)), N'ATUALIZAR_ELEITOR', N'Eleitor', CONCAT(N'NIF ', @n, N': ', @d))");
   });

@@ -22,7 +22,7 @@ Write-Host "   SQL Server: $($svc.Name) ($((Get-Service $svc.Name).Status))"
 
 Set-Location "$PSScriptRoot\app"
 Write-Host "2/4 Dependências..." -ForegroundColor Cyan
-if (-not (Test-Path node_modules)) { npm install --no-audit --no-fund }
+if (-not (Test-Path node_modules/chart.js)) { npm install --no-audit --no-fund }
 
 Write-Host "3/4 A recriar a base de dados com dados de demonstração..." -ForegroundColor Cyan
 node setup.js

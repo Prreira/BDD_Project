@@ -58,6 +58,9 @@ Os diagramas estão em PlantUML na pasta [`uml/`](uml). Para os exportar para im
 ### UC13 — Consultar auditoria e autenticações
 - Últimas ações (autor, ação, detalhe) e últimas tentativas de autenticação. O sentido do voto nunca é registado.
 
+### UC14 — Abrir e encerrar eleições por calendário
+- **Ator:** Sistema. **Fluxo:** a cada 30 s (e em cada consulta ao painel ou à lista de eleições) `sp_AtualizarEstadosEleicoes` passa a Em Curso as eleições Agendadas cuja data de início chegou e que cumprem os requisitos (G8), e a Encerrada as Em Curso cuja data de fim passou. **Alternativo:** eleição que não cumpre os requisitos fica Agendada.
+
 ## 2.2 Diagramas de atividade, sequência e estados
 
 - **Atividades "Autenticar e votar"** (`02_*.puml`): *swimlanes* Eleitor/Sistema, validações do NIF e do código, `ROLLBACK`.

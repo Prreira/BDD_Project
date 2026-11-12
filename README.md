@@ -59,7 +59,7 @@ Suporta eleições por **Lista** (mandatos distribuídos pelo método de Hondt) 
 | `mssql` (tedious) | Ligação ao SQL Server (queries parametrizadas e procedimentos) |
 | `bcryptjs`, `express-session` | Palavras-passe de administradores e sessões |
 | HTML5, CSS3, JavaScript | Interfaces (sem frameworks) |
-| Chart.js | Gráficos do painel de administração |
+| Chart.js 4.4.1 (servido localmente, sem CDN) | Gráficos do painel de administração |
 | Microsoft SQL Server (2016 SP1+, Express serve) | Base de dados, gatilhos, vistas e procedimentos |
 | PlantUML | Diagramas UML (`docs/uml`) |
 | Git e GitHub | Controlo de versões |
@@ -147,7 +147,7 @@ A lógica crítica (um voto por eleitor, anonimato, estados, apuramento, código
 
 ## 📝 Requisitos do Sistema
 
-Especificação completa (20 requisitos funcionais, 12 não funcionais, regras de negócio e matriz de rastreabilidade) em [`docs/01_Requisitos.md`](docs/01_Requisitos.md).
+Especificação completa (21 requisitos funcionais, 12 não funcionais, regras de negócio e matriz de rastreabilidade) em [`docs/01_Requisitos.md`](docs/01_Requisitos.md).
 
 ---
 
@@ -271,7 +271,7 @@ BDD_Project/
 
 ## 🧪 Testes
 
-- **Gatilhos e restrições:** `db/06_testes_gatilhos.sql` — 21 verificações (voto duplicado, eleição não aberta, imutabilidade, estrutura bloqueada, NIF inválido, menor de idade, código de acesso…). Todas devem imprimir `OK`.
+- **Gatilhos e restrições:** `db/06_testes_gatilhos.sql` — 23 verificações (voto duplicado, eleição não aberta, imutabilidade, estrutura bloqueada, NIF inválido, menor de idade, código de acesso…). Todas devem imprimir `OK`.
 - **Aplicação (executados manualmente):** login de eleitor e administrador, perfis (403), voto em eleição por Lista e uninominal com 1 e 2 cargos, segundo voto recusado, código errado/expirado/reutilizado, limite de pedidos, ciclo de vida completo de uma eleição até ao apuramento, páginas em computador e telemóvel.
 
 ---

@@ -1,6 +1,5 @@
-
 const $ = (id) => document.getElementById(id);
-let nifAtual = '', fimCodigo = 0, relogio = null;
+let nifAtual = '', fimCodigo = 0, relogio = null, autoPreencher = null;
 
 /* ---- separadores Eleitor / Administração ---- */
 function escolher(tab) {
@@ -23,7 +22,7 @@ function erro(id, msg) { const e = $(id); e.textContent = msg; e.classList.remov
 function limparErros() { ['erroNif', 'erroCod', 'erroAdmin'].forEach((i) => $(i).classList.add('hidden')); }
 
 /* ---- notificação com o código ---- */
-function mostrarSms(texto, codigo) {
+function mostrarSms(codigo) {
   $('smsTexto').textContent = 'O seu código de acesso eVoto é:';
   $('smsCod').textContent = `${codigo.slice(0, 3)} ${codigo.slice(3)}`;
   $('sms').classList.remove('hidden');
@@ -53,11 +52,13 @@ function passo(n) {
   $('st1').className = n === 1 ? 'on' : 'done';
   $('st2').className = n === 2 ? 'on' : '';
   limparErros();
-  if (n === 1) { clearInterval(relogio); fecharSms(); $('nif').focus(); }
+  if (n === 1) { clearInterval(relogio); clearTimeout(autoPreencher); fecharSms(); $('cod').value = ''; $('nif').focus(); }
 }
 
 async function pedirCodigo() {
   limparErros(); $('btnNif').disabled = true;
+  // o erro aparece no formulário que está visível (passo 1 ou, em "novo código", passo 2)
+  const idErro = $('formCod').classList.contains('hidden') ? 'erroNif' : 'erroCod';
   try {
     const nif = soDigitos($('nif').value);
     if (nif.length !== 9) throw new Error('O NIF tem 9 dígitos.');
@@ -67,13 +68,14 @@ async function pedirCodigo() {
     $('cod').value = ''; $('btnCod').disabled = false;
     passo(2); iniciarRelogio(r.validadeSegundos);
     if (r.codigo) {
-      mostrarSms(r.mensagem, r.codigo);
+      mostrarSms(r.codigo);
       // preenchimento automático, como se a mensagem tivesse acabado de chegar
-      setTimeout(() => { $('cod').value = agrupar(r.codigo, 6); $('btnCod').focus(); }, 1400);
+      clearTimeout(autoPreencher);
+      autoPreencher = setTimeout(() => { $('cod').value = agrupar(r.codigo, 6); $('btnCod').focus(); }, 1400);
     } else {
       $('cod').focus();
     }
-  } catch (e) { erro('erroNif', e.message); }
+  } catch (e) { erro(idErro, e.message); }
   finally { $('btnNif').disabled = false; }
 }
 

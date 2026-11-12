@@ -1,13 +1,14 @@
 @startuml
 title eVoto - Diagrama de estados: Eleição
+
+state "Em Curso" as EmCurso
+
 [*] --> Agendada : criar
-Agendada --> EmCurso : iniciar (manual ou data_inicio)\n[≥1 cargo e recenseado;\n≥2 listas/candidatos]
+Agendada --> EmCurso : iniciar (manual ou data_inicio)\n[≥1 cargo e recenseado; ≥2 listas/candidatos;\ncandidatos em todas as listas/cargos]
 EmCurso --> Encerrada : encerrar (manual ou data_fim)
 Encerrada --> Apurada : apurar\n[integridade verificada]
 Apurada --> [*]
 Agendada --> [*] : eliminar
-
-state "Em Curso" as EmCurso
 
 note right of Agendada
   Estrutura editável: cargos, listas,

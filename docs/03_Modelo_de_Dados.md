@@ -88,7 +88,7 @@ O SQL Server não tem `CREATE ASSERTION`; as regras multi-linha/multi-tabela sã
 | G5 | `trg_Voto_Imutavel` | Voto, INSTEAD OF UPDATE/DELETE | Votos imutáveis |
 | G6 | `trg_Cargo/Lista/Candidato/Recenseamento_Bloqueio` | AFTER I/U/D | Estrutura só muda com a eleição Agendada |
 | G7 | `trg_Candidato_Coerencia` | Candidato, AFTER I/U | Lista obrigatória (Lista) ou proibida (Uninominal); candidato ativo |
-| G8 | `trg_Eleicao_Estado` | Eleicao, AFTER UPDATE | Transições válidas; requisitos para iniciar; dados congelados |
+| G8 | `trg_Eleicao_Estado` | Eleicao, AFTER UPDATE | Transições válidas; requisitos para iniciar (incl. candidatos em todas as listas/cargos); tipo de escrutínio imutável se já há listas/candidatos; dados congelados |
 | G9 | `trg_Eleicao_Auditoria` | Eleicao, AFTER I/U/D | Auditoria com o autor (`SESSION_CONTEXT`) |
 | G10 | `trg_Eleitor_Idade` | Eleitor, AFTER I/U | Idade mínima 18 anos |
 
