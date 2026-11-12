@@ -18,7 +18,7 @@ BDD_Project/
 │  ├─ 02_gatilhos.sql                  Gatilhos (G1–G10)
 │  ├─ 03_vistas_procedimentos.sql      Vistas, NIF, código de acesso, votação, apuramento
 │  ├─ 04_dados_teste.sql               Dados base (60 eleitores, 3 eleições)
-│  ├─ 07_dados_adicionais.sql          Carga de volume (300 eleitores, 6 eleições, ~700 votos)
+│  ├─ 07_dados_adicionais.sql          Carga de volume (150 eleitores, 6 eleições, ~380 votos)
 │  ├─ 05_consultas.sql                 17 interrogações SQL
 │  └─ 06_testes_gatilhos.sql           Testes dos gatilhos e do código de acesso
 └─ app/                                Aplicação web (server.js, routes/, public/, tools/)

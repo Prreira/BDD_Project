@@ -17,7 +17,7 @@ endif
 :Confirmar código;
 |Sistema|
 if (Código correto, não expirado\ne com tentativas?) then (não)
-  :Registar falha; anular após 3 erros;
+  :Registar falha e anular o código após 3 erros;
   |Eleitor|
   stop
 else (sim)
@@ -47,7 +47,7 @@ if (Gatilhos e restrições OK?) then (não)
   |Eleitor|
   stop
 else (sim)
-  :COMMIT; registar auditoria (G3);
+  :COMMIT e registar auditoria (G3);
 endif
 :Emitir comprovativo (hora + referência);
 |Eleitor|

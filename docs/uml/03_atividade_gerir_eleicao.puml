@@ -9,7 +9,7 @@ start
 :Recensear eleitores;
 :Iniciar votação (ou aguardar data_inicio);
 |Sistema|
-if (≥1 cargo e recenseado;\n≥2 listas/candidatos?) then (não)
+if (≥1 cargo e recenseado,\n≥2 listas/candidatos?) then (não)
   :Rejeitar (gatilho G8);
   |Administrador|
   :Corrigir dados;

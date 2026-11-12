@@ -1,9 +1,9 @@
 ﻿/* =====================================================================
    07_dados_adicionais.sql : carga de volume para tornar a demonstração
    realista (dashboards, consultas e gráficos com dados suficientes)
-   - passa de 60 para 300 eleitores (NIF válidos); 2 ficam inativos
-   - Presidencial 2026 (Em Curso): +120 votos ao longo das últimas 22 horas
-   - Eleição da Junta de Freguesia 2026 (Lista, Em Curso): 150 votos
+   - passa de 60 para 150 eleitores (NIF válidos); 2 ficam inativos
+   - Presidencial 2026 (Em Curso): +50 votos ao longo das últimas 22 horas
+   - Eleição da Junta de Freguesia 2026 (Lista, Em Curso): ~70 votos
    - Legislativas 2024 (Lista, Apurada, 17 mandatos por Hondt)
    - Presidencial 2021 (Uninominal, Apurada)
    - registos de autenticação
@@ -16,14 +16,14 @@ SET NOCOUNT ON;
 EXEC sp_set_session_context N'autor', N'ADMIN:1';
 
 CREATE TABLE #N (n INT PRIMARY KEY);
-INSERT #N (n) SELECT TOP (400) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+INSERT #N (n) SELECT TOP (200) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects a CROSS JOIN sys.all_objects b;
 
 -- #K: nº de ordem -> NIF (mesma fórmula do 04_dados_teste.sql)
 CREATE TABLE #K (n INT PRIMARY KEY, nif NVARCHAR(9) COLLATE DATABASE_DEFAULT NOT NULL);
 INSERT #K (n, nif)
-SELECT n, dbo.fn_NifCompletar(CONCAT('2', RIGHT(CONCAT('0000000', 3100000 + n * 7919), 7))) FROM #N WHERE n <= 300;
+SELECT n, dbo.fn_NifCompletar(CONCAT('2', RIGHT(CONCAT('0000000', 3100000 + n * 7919), 7))) FROM #N WHERE n <= 150;
 
-/* ---- 240 eleitores novos (61 a 300) ------------------------------------ */
+/* ---- 90 eleitores novos (61 a 150) ------------------------------------- */
 DECLARE @pn TABLE (i INT, n NVARCHAR(30));
 INSERT @pn VALUES (0,N'Afonso'),(1,N'Beatriz'),(2,N'Cátia'),(3,N'David'),(4,N'Elisa'),(5,N'Fábio'),(6,N'Gabriela'),
                   (7,N'Henrique'),(8,N'Isabel'),(9,N'Jaime'),(10,N'Karina'),(11,N'Leonor'),(12,N'Márcio'),
@@ -52,15 +52,15 @@ INSERT dbo.Recenseamento (eleicao, nif) SELECT @e2, nif FROM #K WHERE n > 60;
 ENABLE TRIGGER dbo.trg_Recenseamento_Bloqueio ON dbo.Recenseamento;
 
 /* ---- 2 eleitores inativos ainda recenseados (para a consulta C13) ------ */
-UPDATE dbo.Eleitor SET ativo = 0 WHERE nif IN (SELECT nif FROM #K WHERE n IN (299, 300));
+UPDATE dbo.Eleitor SET ativo = 0 WHERE nif IN (SELECT nif FROM #K WHERE n IN (149, 150));
 
 /* =====================================================================
-   Presidencial 2026 (Em Curso): +120 votos nas últimas 22 horas
+   Presidencial 2026 (Em Curso): +50 votos nas últimas 22 horas
    ===================================================================== */
 SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 5) AS BIGINT)) % 100 AS r,
        DATEADD(MINUTE, -(ABS(CAST(CHECKSUM(k.n, 11) AS BIGINT)) % 1300), GETDATE()) AS hora
-INTO #VA FROM #K k WHERE k.n BETWEEN 61 AND 180;
+INTO #VA FROM #K k WHERE k.n BETWEEN 61 AND 110;
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 INSERT dbo.RegistoVoto (eleicao, nif, data_hora) SELECT @e2, nif, hora FROM #VA;
@@ -96,7 +96,7 @@ UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e6;
 SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 7) AS BIGINT)) % 100 AS r,
        DATEADD(MINUTE, -(ABS(CAST(CHECKSUM(k.n, 13) AS BIGINT)) % 2400), GETDATE()) AS hora
-INTO #VB FROM #K k WHERE k.n BETWEEN 100 AND 249;
+INTO #VB FROM #K k WHERE k.n BETWEEN 70 AND 140;
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 INSERT dbo.RegistoVoto (eleicao, nif, data_hora) SELECT @e6, nif, hora FROM #VB;
@@ -122,14 +122,14 @@ INSERT dbo.Candidato (eleicao, nif, cargo, sigla_lista, posicao)
 SELECT @e4, nif, N'Assembleia Distrital',
        CASE (n - 100) / 3 WHEN 0 THEN N'PH' WHEN 1 THEN N'AC' WHEN 2 THEN N'MV' WHEN 3 THEN N'IC' ELSE N'LB' END, ((n - 100) % 3) + 1
 FROM #K WHERE n BETWEEN 100 AND 114;
-INSERT dbo.Recenseamento (eleicao, nif) SELECT @e4, nif FROM #K WHERE n <= 280;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e4, nif FROM #K WHERE n <= 140;
 UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e4;
 
 SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 5) AS BIGINT)) % 1000 AS r,
        DATEADD(MINUTE, ABS(CAST(CHECKSUM(k.n, 3) AS BIGINT)) % 720,
                DATEADD(HOUR, 8, CAST(CAST(DATEADD(DAY, -700, GETDATE()) AS DATE) AS DATETIME))) AS hora
-INTO #VC FROM #K k WHERE k.n <= 280 AND ABS(CAST(CHECKSUM(k.n, 21) AS BIGINT)) % 100 < 78;
+INTO #VC FROM #K k WHERE k.n <= 140 AND ABS(CAST(CHECKSUM(k.n, 21) AS BIGINT)) % 100 < 78;
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
@@ -154,15 +154,15 @@ INSERT dbo.Eleicao (nome, descricao, data_inicio, data_fim, tipo_escrutinio, id_
 VALUES (@e5, N'Eleição do Presidente da República (histórico).',
         DATEADD(DAY, -1800, GETDATE()), DATEADD(DAY, -1799, GETDATE()), 'Uninominal', 1);
 INSERT dbo.Cargo (eleicao, cargo, num_mandatos) VALUES (@e5, N'Presidente da República', 1);
-INSERT dbo.Candidato (eleicao, nif, cargo) SELECT @e5, nif, N'Presidente da República' FROM #K WHERE n BETWEEN 120 AND 122;
-INSERT dbo.Recenseamento (eleicao, nif) SELECT @e5, nif FROM #K WHERE n <= 200;
+INSERT dbo.Candidato (eleicao, nif, cargo) SELECT @e5, nif, N'Presidente da República' FROM #K WHERE n BETWEEN 85 AND 87;
+INSERT dbo.Recenseamento (eleicao, nif) SELECT @e5, nif FROM #K WHERE n <= 110;
 UPDATE dbo.Eleicao SET estado = 'Em Curso' WHERE nome = @e5;
 
 SELECT k.n, k.nif,
        ABS(CAST(CHECKSUM(k.n, 8) AS BIGINT)) % 1000 AS r,
        DATEADD(MINUTE, ABS(CAST(CHECKSUM(k.n, 4) AS BIGINT)) % 720,
                DATEADD(HOUR, 8, CAST(CAST(DATEADD(DAY, -1800, GETDATE()) AS DATE) AS DATETIME))) AS hora
-INTO #VD FROM #K k WHERE k.n <= 200 AND ABS(CAST(CHECKSUM(k.n, 22) AS BIGINT)) % 100 < 70;
+INTO #VD FROM #K k WHERE k.n <= 110 AND ABS(CAST(CHECKSUM(k.n, 22) AS BIGINT)) % 100 < 70;
 
 DISABLE TRIGGER dbo.trg_RegistoVoto_Validar   ON dbo.RegistoVoto;
 DISABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
@@ -173,9 +173,9 @@ ENABLE TRIGGER dbo.trg_RegistoVoto_Auditoria ON dbo.RegistoVoto;
 INSERT dbo.Voto (eleicao, tipo_voto, cargo, nif_candidato)
 SELECT @e5, CASE WHEN v.r < 930 THEN 'Valido' WHEN v.r < 970 THEN 'Branco' ELSE 'Nulo' END,
        N'Presidente da República',
-       CASE WHEN v.r < 430 THEN (SELECT nif FROM #K WHERE n = 120)
-            WHEN v.r < 780 THEN (SELECT nif FROM #K WHERE n = 121)
-            WHEN v.r < 930 THEN (SELECT nif FROM #K WHERE n = 122) END
+       CASE WHEN v.r < 430 THEN (SELECT nif FROM #K WHERE n = 85)
+            WHEN v.r < 780 THEN (SELECT nif FROM #K WHERE n = 86)
+            WHEN v.r < 930 THEN (SELECT nif FROM #K WHERE n = 87) END
 FROM #VD v;
 DROP TABLE #VD;
 UPDATE dbo.Eleicao SET estado = 'Encerrada' WHERE nome = @e5;

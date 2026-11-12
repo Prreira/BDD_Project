@@ -79,7 +79,7 @@ $env:DB_INSTANCE = "SQLEXPRESS"        # instância nomeada (omitir se usar o po
 $env:DB_USER     = "sa"
 $env:DB_PASSWORD = "a-sua-password"
 
-npm run setup        # RECRIA a BD eVoto (tabelas, gatilhos, vistas, 300 eleitores, 6 eleições)
+npm run setup        # RECRIA a BD eVoto (tabelas, gatilhos, vistas, 150 eleitores, 6 eleições)
 npm start            # http://localhost:3000
 ```
 
@@ -232,7 +232,7 @@ Asserções declarativas: `CK_Eleitor_Nif` (dígito de controlo), `CK_Voto_Desti
 | C16 | Autenticações falhadas nas últimas 24 h | JOIN, GROUP BY, HAVING, subconsulta |
 | C17 | Composição de cada lista | JOIN de 3 tabelas |
 
-Dados de demonstração (`db/04_dados_teste.sql` + `db/07_dados_adicionais.sql`): **300 eleitores** com NIF válido, **6 eleições** (2 em curso, 1 agendada, 3 apuradas) e cerca de 700 votos.
+Dados de demonstração (`db/04_dados_teste.sql` + `db/07_dados_adicionais.sql`): **150 eleitores** com NIF válido, **6 eleições** (2 em curso, 1 agendada, 3 apuradas) e cerca de 380 votos.
 
 ---
 
